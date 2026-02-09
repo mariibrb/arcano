@@ -9,10 +9,10 @@ st.set_page_config(page_title="ARCANUM - Auditoria de Importação", layout="wid
 # --- CLASSE PARA GERAÇÃO DO PDF (REPLICA DO LAYOUT DANFE 607) ---
 class EspelhoDANFE(FPDF):
     def header(self):
-        # Quadro de Identificação do Emitente (Em branco conforme solicitado)
+        # Quadro de Identificação do Emitente (Em branco)
         self.rect(10, 10, 95, 25) 
         
-        # Quadro DANFE / Número / Série [cite: 85, 93]
+        # Quadro DANFE / Número / Série [cite: 85, 88, 93]
         self.rect(105, 10, 35, 25)
         self.set_font('Arial', 'B', 10)
         self.set_xy(105, 12)
@@ -28,13 +28,13 @@ class EspelhoDANFE(FPDF):
         self.set_x(105)
         self.cell(35, 4, 'Série 1', 0, 1, 'C')
 
-        # Quadro Chave de Acesso [cite: 99, 100]
+        # Quadro Chave de Acesso [cite: 100]
         self.rect(140, 10, 60, 25)
         self.set_font('Arial', '', 6)
         self.set_xy(140, 11)
         self.cell(60, 4, 'CHAVE DE ACESSO', 0, 1, 'L')
 
-        # Natureza da Operação [cite: 94, 95]
+        # Natureza da Operação [cite: 94]
         self.rect(10, 35, 190, 8)
         self.set_xy(10, 35)
         self.set_font('Arial', '', 6)
@@ -54,13 +54,13 @@ def gerar_pdf(df_final, params):
     pdf = EspelhoDANFE()
     pdf.add_page()
     
-    # --- QUADRO: CÁLCULO DO IMPOSTO (REPLICA DO 607.pdf) [cite: 121] ---
+    # --- QUADRO: CÁLCULO DO IMPOSTO [cite: 121] ---
     pdf.set_font('Arial', 'B', 7)
     pdf.cell(190, 5, 'CÁLCULO DO IMPOSTO', 1, 1, 'L')
     
     fmt = lambda x: f"{x:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
-    # Linha 1: Base ICMS, Vlr ICMS, Base ST, Vlr ST, V. Tot Produtos [cite: 122, 123, 145]
+    # Linha 1 [cite: 122, 123, 145]
     pdf.set_font('Arial', '', 6)
     pdf.cell(38, 4, 'BASE DE CÁLC DO ICMS', 'LR', 0, 'L')
     pdf.cell(38, 4, 'VALOR DO ICMS', 'LR', 0, 'L')
@@ -75,7 +75,7 @@ def gerar_pdf(df_final, params):
     pdf.cell(38, 5, fmt(0.00), 'LRB', 0, 'R')
     pdf.cell(38, 5, fmt(params['v_prod_danfe']), 'LRB', 1, 'R')
     
-    # Linha 2: Frete, Seguro, PIS, Cofins, IPI, Total Nota [cite: 128, 129, 132, 139, 149, 152]
+    # Linha 2 [cite: 128, 129, 132, 139, 149, 152]
     pdf.set_font('Arial', '', 6)
     pdf.cell(31.6, 4, 'VALOR DO FRETE', 'LR', 0, 'L')
     pdf.cell(31.6, 4, 'VALOR DO SEGURO', 'LR', 0, 'L')
@@ -115,69 +115,78 @@ def gerar_pdf(df_final, params):
         pdf.cell(w[8], 5, fmt(row.get('VLR_PROD_TOTAL', 0)), 1, 0, 'R')
         pdf.ln()
 
-    # --- DADOS ADICIONAIS [cite: 174, 175] ---
+    # --- DADOS ADICIONAIS [cite: 174] ---
     pdf.ln(5)
     pdf.set_font('Arial', 'B', 7)
     pdf.cell(190, 5, 'DADOS ADICIONAIS', 1, 1, 'L')
     pdf.set_font('Arial', '', 6)
-    obs = (f"Nr. DI: 2601704700 | CIF: {fmt(params['cif'])} | Tx Siscomex: {fmt(params['taxa_sis'])} | "
+    obs = (f"Informacoes Complementares: Nr. DI: 2601704700 | CIF: {fmt(params['cif'])} | Tx Siscomex: {fmt(params['taxa_sis'])} | "
            f"AFRMM: {fmt(params['afrmm'])} | ICMS DIFERIDO NO VALOR DE R$ {fmt(params['v_icms_diferido'])}.")
     pdf.multi_cell(190, 4, obs, 1)
     
     return bytes(pdf.output())
 
-# --- INTERFACE STREAMLIT (RESTAURADA INTEGRALMENTE) ---
+# --- INTERFACE STREAMLIT ---
 st.title("📜 ARCANUM")
-st.write("Auditoria de Importação e Geração de DANFE")
 st.divider()
 
 col_cambio, col_log, col_fiscal = st.columns(3)
-
 with col_cambio:
     taxa_cambio = st.number_input("Taxa de Câmbio", min_value=0.0001, value=5.2000, format="%.4f")
-
 with col_log:
     v_frete = st.number_input("Frete Internacional", min_value=0.0, value=7806.41)
     v_seguro = st.number_input("Seguro Internacional", min_value=0.0, value=1190.87)
     v_taxas = st.number_input("Taxas Siscomex", min_value=0.0, value=154.23)
     v_afrmm = st.number_input("AFRMM Total", min_value=0.0, value=782.91)
-
 with col_fiscal:
     regime = st.selectbox("Regime PIS/COFINS", ["Lucro Real", "Lucro Presumido"])
     aliq_icms = st.number_input("Alíquota ICMS (%)", value=18.0)
-    tem_dif = st.radio("Diferimento?", ("Sim", "Não"), horizontal=True) # Você volta a falar se é diferido ou não
+    tem_dif = st.radio("Diferimento?", ("Sim", "Não"), horizontal=True)
     perc_dif = st.number_input("Percentual Diferido (%)", value=100.0) if tem_dif == "Sim" else 0.0
 
-arquivo_subido = st.file_uploader("Suba a planilha de itens", type=["xlsx"])
+st.divider()
 
+# --- SEÇÃO 2: MODELO E UPLOAD (RESTAURADA) ---
+st.subheader("📋 2. Itens da Importação")
+col_mod, col_up = st.columns([1, 2])
+
+with col_mod:
+    df_modelo = pd.DataFrame({
+        'PRODUTO': ['EXEMPLO ITEM 01'], 'NCM': ['4202.12.10'], 'QTD': [10], 
+        'VLR_UNITARIO_MOEDA': [100.00], 'ALIQ_II': [14.0], 'ALIQ_IPI': [6.5]
+    })
+    buffer_mod = io.BytesIO()
+    with pd.ExcelWriter(buffer_mod, engine='openpyxl') as writer:
+        df_modelo.to_excel(writer, index=False)
+    st.download_button(label="📥 Baixar Planilha Modelo", data=buffer_mod.getvalue(), file_name="modelo_arcanum_di.xlsx")
+
+with col_up:
+    arquivo_subido = st.file_uploader("Suba a planilha preenchida aqui", type=["xlsx"])
+
+# --- SEÇÃO 3: CÁLCULOS ---
 if arquivo_subido:
     df = pd.read_excel(arquivo_subido)
     df.columns = [c.upper().strip() for c in df.columns]
     
-    # Tratamento para evitar o KeyError (procura colunas similares)
     col_vlr = next((c for c in ['VLR_UNITARIO_MOEDA', 'VLR_UNITARIO', 'VALOR_UNITARIO'] if c in df.columns), None)
     col_qtd = next((c for c in ['QTD', 'QUANTIDADE'] if c in df.columns), None)
 
     if not col_vlr or not col_qtd:
-        st.error("❌ Coluna de Valor ou Qtd não encontrada na planilha.")
+        st.error("❌ Coluna de Valor ou Qtd não encontrada.")
         st.stop()
 
     df['VLR_UNITARIO_BRL'] = df[col_vlr] * taxa_cambio
     df['VLR_PROD_TOTAL'] = df[col_qtd] * df['VLR_UNITARIO_BRL']
     total_prods_brl = df['VLR_PROD_TOTAL'].sum()
     
-    # Cálculos Dinâmicos baseados na Planilha image_7830c1.png
     p_pis = 2.10 if regime == "Lucro Real" else 0.65
     p_cof = 9.65 if regime == "Lucro Real" else 3.00
     
-    # II e IPI (Pode vir da planilha ou ser calculado)
     v_ii_tot = df.get('VLR_II', total_prods_brl * 0.14).sum()
     v_ipi_tot = df.get('VLR_IPI', (total_prods_brl + v_ii_tot) * 0.05).sum()
-    
     pis_tot = total_prods_brl * (p_pis/100)
     cof_tot = total_prods_brl * (p_cof/100)
     
-    # Base ICMS (Por dentro conforme lei)
     base_icms = (total_prods_brl + v_frete + v_seguro + v_taxas + v_afrmm + v_ii_tot + v_ipi_tot + pis_tot + cof_tot) / (1 - (aliq_icms/100))
     icms_cheio = base_icms * (aliq_icms/100)
     v_icms_diferido = icms_cheio * (perc_dif/100)
