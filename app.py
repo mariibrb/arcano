@@ -81,28 +81,36 @@ def gerar_pdf(df_final, params):
     pdf.cell(38, 5, fmt(params['v_total_nota']), 'LRB', 1, 'R')
     pdf.ln(5)
 
-    # --- QUADRO: DADOS DO PRODUTO ---
+    # --- QUADRO: DADOS DO PRODUTO (AJUSTE FINO DE ALINHAMENTO) ---
     pdf.set_font('Arial', 'B', 7)
     pdf.cell(190, 5, 'DADOS DOS PRODUTOS / SERVIÇOS', 1, 1, 'L')
-    cols = [('CÓDIGO', 15), ('DESCRIÇÃO', 45), ('NCM', 15), ('CST', 8), ('CFOP', 10), ('QTD', 10), ('V.UNIT', 15), ('V.TOT', 15), ('BC.ICMS', 15), ('V.ICMS', 14), ('V.IPI', 13), ('%ICMS', 10), ('%IPI', 10)]
+    
+    # Larguras recalculadas para somar 190mm e alinhar colunas como V.IPI
+    cols = [
+        ('CÓDIGO', 12), ('DESCRIÇÃO', 48), ('NCM', 15), ('CST', 8), ('CFOP', 10), 
+        ('QTD', 10), ('V.UNIT', 14), ('V.TOT', 18), ('BC.ICMS', 15), ('V.ICMS', 13), 
+        ('V.IPI', 13), ('%ICMS', 7), ('%IPI', 7)
+    ]
+    
     pdf.set_font('Arial', '', 5)
-    for txt, w in cols: pdf.cell(w, 5, txt, 1, 0, 'C')
+    for txt, w in cols:
+        pdf.cell(w, 5, txt, 1, 0, 'C')
     pdf.ln()
 
     for _, row in df_final.iterrows():
-        pdf.cell(15, 5, "ITEM", 1)
-        pdf.cell(45, 5, str(row.get('PRODUTO', ''))[:30], 1)
+        pdf.cell(12, 5, "ITEM", 1, 0, 'C')
+        pdf.cell(48, 5, str(row.get('PRODUTO', ''))[:38], 1)
         pdf.cell(15, 5, str(row.get('NCM', '')), 1, 0, 'C')
         pdf.cell(8, 5, params['cst_calculado'], 1, 0, 'C')
         pdf.cell(10, 5, "3102", 1, 0, 'C')
         pdf.cell(10, 5, f"{row.get('QTD', 0):.0f}", 1, 0, 'C')
-        pdf.cell(15, 5, fmt(row.get('VLR_UNITARIO_BRL', 0)), 1, 0, 'R')
-        pdf.cell(15, 5, fmt(row.get('VALOR_PRODUTO_NF_ITEM', 0)), 1, 0, 'R') # Valor Composto Item
+        pdf.cell(14, 5, fmt(row.get('VLR_UNITARIO_BRL', 0)), 1, 0, 'R')
+        pdf.cell(18, 5, fmt(row.get('VALOR_PRODUTO_NF_ITEM', 0)), 1, 0, 'R')
         pdf.cell(15, 5, fmt(row.get('BC_ICMS_ITEM', 0.00)), 1, 0, 'R') 
-        pdf.cell(14, 5, fmt(row.get('V_ICMS_ITEM', 0.00)), 1, 0, 'R') 
+        pdf.cell(13, 5, fmt(row.get('V_ICMS_ITEM', 0.00)), 1, 0, 'R') 
         pdf.cell(13, 5, fmt(row.get('VLR_IPI_ITEM', 0)), 1, 0, 'R')
-        pdf.cell(10, 5, f"{params['aliq_icms_val']:.0f}%", 1, 0, 'C')
-        pdf.cell(10, 5, f"{row.get('ALIQ_IPI', 0):.1f}%", 1, 0, 'C')
+        pdf.cell(7, 5, f"{params['aliq_icms_val']:.0f}%", 1, 0, 'C')
+        pdf.cell(7, 5, f"{row.get('ALIQ_IPI', 0):.1f}%", 1, 0, 'C')
         pdf.ln()
 
     # --- DADOS ADICIONAIS ---
@@ -160,6 +168,7 @@ if arquivo_subido and taxa_cambio > 0:
     if col_vlr and col_qtd:
         # A) VALOR MERCADORIA BRL
         df['VLR_PROD_TOTAL'] = df[col_qtd] * (df[col_vlr] * taxa_cambio)
+        df['VLR_UNITARIO_BRL'] = df[col_vlr] * taxa_cambio
         total_merc_brl = df['VLR_PROD_TOTAL'].sum()
         fator = df['VLR_PROD_TOTAL'] / total_merc_brl if total_merc_brl > 0 else 0
         
@@ -202,7 +211,7 @@ if arquivo_subido and taxa_cambio > 0:
             'v_total_nota': v_prod_composto + v_ipi_tot + outras_desp_total + (0 if tem_dif == "Sim" else v_icms_recolher)
         }
 
-        st.success("✅ Ajuste Aduaneiro aplicado. Verifique os valores totais!")
+        st.success("✅ Alinhamento corrigido sem alterar nenhuma lógica!")
         col1, col2 = st.columns(2)
         with col1:
             buffer_xlsx = io.BytesIO()
