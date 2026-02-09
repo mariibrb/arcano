@@ -15,7 +15,7 @@ class EspelhoDANFE(FPDF):
         self.set_font('Arial', '', 8)
         self.cell(60, 15, 'Entrada [X] Saída [ ]', 1, 1, 'C')
         
-        # Dados do Destinatário/Remetente
+        # Dados do Destinatário/Remetente (Conforme o seu PDF)
         self.set_font('Arial', 'B', 8)
         self.set_fill_color(240, 240, 240)
         self.cell(190, 8, 'DESTINATÁRIO / REMETENTE', 1, 1, 'L', fill=True)
@@ -132,7 +132,7 @@ if arquivo_subido:
         col_qtd = next((c for c in ['QTD', 'QUANTIDADE'] if c in df.columns), None)
 
         if col_vlr is None or col_qtd is None:
-            st.error(f"❌ Erro de Colunas: Certifique-se que a planilha tem as colunas 'QTD' e 'VLR_UNITARIO_MOEDA'.")
+            st.error(f"❌ Erro de Colunas: Verifique a planilha.")
             st.stop()
 
         df['VLR_UNITARIO_BRL'] = df[col_vlr] * taxa_cambio
@@ -159,10 +159,12 @@ if arquivo_subido:
             
             st.divider()
             st.success("📝 Espelho da Nota Fiscal Gerado!")
+            
+            # --- CORREÇÃO DO KEYERROR AQUI ---
             cols_exibicao = ['DI', 'ADICAO', 'ITEM', 'NCM', 'PRODUTO', 'VLR_ADUANEIRO', 'VLR_II', 'RAT_AFRMM', 'BASE_ICMS', 'ICMS_RECOLHER']
-            st.dataframe(df[cols_exibicao].style.format(precision=2), use_container_width=True)
+            cols_reais = [c for c in cols_exibicao if c in df.columns]
+            st.dataframe(df[cols_reais].style.format(precision=2), use_container_width=True)
 
-            # Parâmetros para o PDF
             params_pdf = {
                 'afrmm': v_afrmm,
                 'pis_tot': df['VLR_PIS'].sum(),
