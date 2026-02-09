@@ -127,7 +127,7 @@ def gerar_pdf(df_final, params):
     
     return bytes(pdf.output())
 
-# --- INTERFACE STREAMLIT (INTEGRAÇÃO TOTAL) ---
+# --- INTERFACE STREAMLIT (TUDO RIGOROSAMENTE ZERADO) ---
 st.title("📜 ARCANUM")
 st.divider()
 
@@ -135,15 +135,15 @@ col_cambio, col_log, col_fiscal = st.columns(3)
 with col_cambio:
     taxa_cambio = st.number_input("Taxa de Câmbio", min_value=0.0, value=0.0, format="%.4f")
 with col_log:
-    v_frete = st.number_input("Frete Internacional", min_value=0.0, step=0.01)
-    v_seguro = st.number_input("Seguro Internacional", min_value=0.0, step=0.01)
-    v_taxas = st.number_input("Taxas Siscomex", min_value=0.0, step=0.01)
-    v_afrmm = st.number_input("AFRMM Total", min_value=0.0, step=0.01)
+    v_frete = st.number_input("Frete Internacional", min_value=0.0, value=0.0, step=0.01)
+    v_seguro = st.number_input("Seguro Internacional", min_value=0.0, value=0.0, step=0.01)
+    v_taxas = st.number_input("Taxas Siscomex", min_value=0.0, value=0.0, step=0.01)
+    v_afrmm = st.number_input("AFRMM Total", min_value=0.0, value=0.0, step=0.01)
 with col_fiscal:
     regime = st.selectbox("Regime PIS/COFINS", ["Lucro Real", "Lucro Presumido"])
-    aliq_icms = st.number_input("Alíquota ICMS (%)", value=18.0)
-    tem_dif = st.radio("Diferimento?", ("Sim", "Não"), horizontal=True)
-    perc_dif = st.number_input("Percentual Diferido (%)", value=100.0) if tem_dif == "Sim" else 0.0
+    aliq_icms = st.number_input("Alíquota ICMS (%)", min_value=0.0, value=0.0, step=0.1) # Zerado
+    tem_dif = st.radio("Diferimento?", ("Sim", "Não"), index=1, horizontal=True) # Inicia em Não
+    perc_dif = st.number_input("Percentual Diferido (%)", min_value=0.0, value=0.0, step=0.1) if tem_dif == "Sim" else 0.0 # Zerado
 
 st.divider()
 
@@ -158,49 +158,59 @@ with col_mod:
 with col_up:
     arquivo_subido = st.file_uploader("Suba a planilha preenchida aqui", type=["xlsx"])
 
-# --- SEÇÃO 3: PROCESSAMENTO ---
+# --- SEÇÃO 3: PROCESSAMENTO DINÂMICO ---
 if arquivo_subido and taxa_cambio > 0:
     df = pd.read_excel(arquivo_subido)
     df.columns = [c.upper().strip() for c in df.columns]
     
-    df['VLR_UNITARIO_BRL'] = df['VLR_UNITARIO_MOEDA'] * taxa_cambio
-    df['VLR_PROD_TOTAL'] = df['QTD'] * df['VLR_UNITARIO_BRL']
-    total_mercadoria = df['VLR_PROD_TOTAL'].sum()
-    
-    # Cálculos Fiscais
-    df['VLR_II_ITEM'] = df['VLR_PROD_TOTAL'] * (df.get('ALIQ_II', 0)/100)
-    df['VLR_IPI_ITEM'] = (df['VLR_PROD_TOTAL'] + df['VLR_II_ITEM']) * (df.get('ALIQ_IPI', 0)/100)
-    p_pis = 2.10 if regime == "Lucro Real" else 0.65
-    p_cof = 9.65 if regime == "Lucro Real" else 3.00
-    v_pis_total = total_mercadoria * (p_pis/100)
-    v_cof_total = total_mercadoria * (p_cof/100)
-    
-    v_prod_composto = total_mercadoria + df['VLR_II_ITEM'].sum() + v_pis_total + v_cof_total + v_taxas
-    v_ipi_tot = df['VLR_IPI_ITEM'].sum()
-    base_icms_real = (v_prod_composto + v_frete + v_seguro + v_afrmm + v_ipi_tot) / (1 - (aliq_icms/100))
-    v_icms_recolher = (base_icms_real * (aliq_icms/100)) * (1 - (perc_dif/100))
-    v_icms_diferido = (base_icms_real * (aliq_icms/100)) * (perc_dif/100)
+    col_vlr = next((c for c in ['VLR_UNITARIO_MOEDA', 'VLR_UNITARIO'] if c in df.columns), None)
+    col_qtd = next((c for c in ['QTD', 'QUANTIDADE'] if c in df.columns), None)
 
-    # Detalhamento por Item
-    df['BC_ICMS_ITEM'] = 0.00 if tem_dif == "Sim" else (df['VLR_PROD_TOTAL'] / total_mercadoria) * base_icms_real
-    df['V_ICMS_ITEM'] = 0.00 if tem_dif == "Sim" else df['BC_ICMS_ITEM'] * (aliq_icms/100)
+    if col_vlr and col_qtd:
+        df['VLR_UNITARIO_BRL'] = df[col_vlr] * taxa_cambio
+        df['VLR_PROD_TOTAL'] = df[col_qtd] * df['VLR_UNITARIO_BRL']
+        total_mercadoria = df['VLR_PROD_TOTAL'].sum()
+        
+        # Cálculos Fiscais Reais
+        df['VLR_II_ITEM'] = df['VLR_PROD_TOTAL'] * (df.get('ALIQ_II', 0)/100)
+        df['VLR_IPI_ITEM'] = (df['VLR_PROD_TOTAL'] + df['VLR_II_ITEM']) * (df.get('ALIQ_IPI', 0)/100)
+        p_pis = 2.10 if regime == "Lucro Real" else 0.65
+        p_cof = 9.65 if regime == "Lucro Real" else 3.00
+        v_pis_total = total_mercadoria * (p_pis/100)
+        v_cof_total = total_mercadoria * (p_cof/100)
+        
+        v_prod_composto = total_mercadoria + df['VLR_II_ITEM'].sum() + v_pis_total + v_cof_total + v_taxas
+        v_ipi_tot = df['VLR_IPI_ITEM'].sum()
+        
+        # ICMS (Calculado apenas se alíquota > 0)
+        base_icms_real = 0.0
+        v_icms_recolher = 0.0
+        v_icms_diferido = 0.0
+        if aliq_icms > 0:
+            base_icms_real = (v_prod_composto + v_frete + v_seguro + v_afrmm + v_ipi_tot) / (1 - (aliq_icms/100))
+            v_icms_recolher = (base_icms_real * (aliq_icms/100)) * (1 - (perc_dif/100))
+            v_icms_diferido = (base_icms_real * (aliq_icms/100)) * (perc_dif/100)
 
-    params_pdf = {
-        'v_prod_composto': v_prod_composto, 'frete': v_frete, 'seguro': v_seguro, 'afrmm': v_afrmm,
-        'v_ipi_tot': v_ipi_tot, 'v_icms_diferido': v_icms_diferido,
-        'aliq_icms_val': aliq_icms, 'is_diferido': (tem_dif == "Sim"),
-        'cst_calculado': "051" if tem_dif == "Sim" else "100",
-        'base_icms_header': 0.00 if tem_dif == "Sim" else base_icms_real,
-        'v_icms_header': 0.00 if tem_dif == "Sim" else v_icms_recolher,
-        'v_total_nota': v_prod_composto + v_ipi_tot + v_frete + v_seguro + v_afrmm + (0 if tem_dif == "Sim" else v_icms_recolher)
-    }
+        # Detalhamento por Item
+        df['BC_ICMS_ITEM'] = 0.00 if tem_dif == "Sim" else (df['VLR_PROD_TOTAL'] / total_mercadoria) * base_icms_real
+        df['V_ICMS_ITEM'] = 0.00 if tem_dif == "Sim" else df['BC_ICMS_ITEM'] * (aliq_icms/100)
 
-    st.success("✅ Cálculos processados!")
-    col_exp1, col_exp2 = st.columns(2)
-    with col_exp1:
-        buffer_xlsx = io.BytesIO()
-        with pd.ExcelWriter(buffer_xlsx, engine='openpyxl') as writer: df.to_excel(writer, index=False)
-        st.download_button("📥 Baixar Espelho em Excel", buffer_xlsx.getvalue(), "espelho_arcanum_conferencia.xlsx")
-    with col_exp2:
-        pdf_bytes = gerar_pdf(df, params_pdf)
-        st.download_button("📥 Baixar PDF (Modelo 607)", pdf_bytes, "danfe_arcanum.pdf", "application/pdf")
+        params_pdf = {
+            'v_prod_composto': v_prod_composto, 'frete': v_frete, 'seguro': v_seguro, 'afrmm': v_afrmm,
+            'v_ipi_tot': v_ipi_tot, 'v_icms_diferido': v_icms_diferido,
+            'aliq_icms_val': aliq_icms, 'is_diferido': (tem_dif == "Sim"),
+            'cst_calculado': "051" if tem_dif == "Sim" else "100",
+            'base_icms_header': 0.00 if tem_dif == "Sim" else base_icms_real,
+            'v_icms_header': 0.00 if tem_dif == "Sim" else v_icms_recolher,
+            'v_total_nota': v_prod_composto + v_ipi_tot + v_frete + v_seguro + v_afrmm + (0 if tem_dif == "Sim" else v_icms_recolher)
+        }
+
+        st.success("✅ Auditoria realizada!")
+        col_exp1, col_exp2 = st.columns(2)
+        with col_exp1:
+            buffer_xlsx = io.BytesIO()
+            with pd.ExcelWriter(buffer_xlsx, engine='openpyxl') as writer: df.to_excel(writer, index=False)
+            st.download_button("📥 Baixar Excel", buffer_xlsx.getvalue(), "espelho_conferencia.xlsx")
+        with col_exp2:
+            pdf_bytes = gerar_pdf(df, params_pdf)
+            st.download_button("📥 Baixar PDF (Modelo 607)", pdf_bytes, "danfe_arcanum.pdf", "application/pdf")
