@@ -1,9 +1,53 @@
 import streamlit as st
 import pandas as pd
 import io
+from fpdf import FPDF
 
 # Configuração Básica - Design Nativo e Amplo
 st.set_page_config(page_title="ARCANUM - Auditoria de Importação", layout="wide")
+
+# --- CLASSE PARA GERAÇÃO DO PDF (ESTILO ESPELHO DANFE) ---
+class EspelhoDANFE(FPDF):
+    def header(self):
+        self.set_font('Arial', 'B', 12)
+        self.cell(0, 10, 'ARCANUM - ESPELHO DE NOTA FISCAL DE IMPORTAÇÃO', 1, 1, 'C')
+        self.ln(5)
+
+    def footer(self):
+        self.set_y(-15)
+        self.set_font('Arial', 'I', 8)
+        self.cell(0, 10, f'Página {self.page_no()}', 0, 0, 'C')
+
+def gerar_pdf(df_final):
+    pdf = EspelhoDANFE()
+    pdf.add_page(orientation='L') # Paisagem para caber todas as colunas
+    pdf.set_font('Arial', 'B', 8)
+    
+    # Definição de Colunas e Larguras para o PDF
+    colunas_pdf = ['DI', 'ADICAO', 'ITEM', 'PRODUTO', 'VLR_ADUAN', 'VLR_II', 'VLR_IPI', 'BASE_ICMS', 'ICMS_REC']
+    larguras = [25, 15, 10, 60, 30, 25, 25, 30, 30]
+    
+    # Cabeçalho da Tabela no PDF
+    pdf.set_fill_color(230, 230, 230)
+    for i, col in enumerate(colunas_pdf):
+        pdf.cell(larguras[i], 7, col, 1, 0, 'C', 1)
+    pdf.ln()
+
+    # Dados no PDF
+    pdf.set_font('Arial', '', 7)
+    for index, row in df_final.iterrows():
+        pdf.cell(larguras[0], 6, str(row['DI']), 1)
+        pdf.cell(larguras[1], 6, str(row['ADICAO']), 1, 0, 'C')
+        pdf.cell(larguras[2], 6, str(row['ITEM']), 1, 0, 'C')
+        pdf.cell(larguras[3], 6, str(row['PRODUTO'])[:35], 1)
+        pdf.cell(larguras[4], 6, f"{row['VLR_ADUANEIRO']:.2f}", 1, 0, 'R')
+        pdf.cell(larguras[5], 6, f"{row['VLR_II']:.2f}", 1, 0, 'R')
+        pdf.cell(larguras[6], 6, f"{row['VLR_IPI']:.2f}", 1, 0, 'R')
+        pdf.cell(larguras[7], 6, f"{row['BASE_ICMS']:.2f}", 1, 0, 'R')
+        pdf.cell(larguras[8], 6, f"{row['ICMS_RECOLHER']:.2f}", 1, 0, 'R')
+        pdf.ln()
+        
+    return pdf.output()
 
 st.title("📜 ARCANUM")
 st.write("Módulo de Auditoria de Importação e Geração de Espelho Fiscal - Projeto Sentinela")
@@ -28,16 +72,11 @@ with col_log:
 with col_fiscal:
     st.subheader("⚖️ Fiscal e ICMS")
     regime = st.selectbox("Regime PIS/COFINS", ["Lucro Real (11,75%)", "Lucro Presumido (3,65%)"])
-    
-    # Alíquotas Federais
     p_pis = 2.10 if "Real" in regime else 0.65
     p_cofins = 9.65 if "Real" in regime else 3.00
-    
     if st.checkbox("Aplicar Majorada (+1% COFINS)"):
         p_cofins += 1.0
-        
     aliq_icms = st.number_input("Alíquota ICMS (%)", value=18.0, step=0.1)
-    
     with st.expander("Configurar Diferimento"):
         tem_dif = st.radio("Haverá Diferimento?", ("Não", "Sim"), horizontal=True)
         perc_dif = 0.0
@@ -52,26 +91,13 @@ col_mod, col_up = st.columns([1, 2])
 
 with col_mod:
     df_modelo = pd.DataFrame({
-        'DI': ['26/0000001-0'],
-        'ADICAO': ['001'],
-        'ITEM': [1],
-        'NCM': ['8517.62.77'],
-        'PRODUTO': ['Exemplo de Item'],
-        'QTD': [10],
-        'VLR_UNITARIO_MOEDA': [300.00],
-        'ALIQ_II': [14.0],
-        'ALIQ_IPI': [5.0]
+        'DI': ['26/0000001-0'], 'ADICAO': ['001'], 'ITEM': [1], 'NCM': ['8517.62.77'],
+        'PRODUTO': ['Exemplo de Item'], 'QTD': [10], 'VLR_UNITARIO_MOEDA': [300.00], 'ALIQ_II': [14.0], 'ALIQ_IPI': [5.0]
     })
-    
     buffer_mod = io.BytesIO()
     with pd.ExcelWriter(buffer_mod, engine='openpyxl') as writer:
         df_modelo.to_excel(writer, index=False)
-        
-    st.download_button(
-        label="📥 Baixar Planilha Modelo",
-        data=buffer_mod.getvalue(),
-        file_name="modelo_arcanum_di.xlsx"
-    )
+    st.download_button(label="📥 Baixar Planilha Modelo", data=buffer_mod.getvalue(), file_name="modelo_arcanum_di.xlsx")
 
 with col_up:
     arquivo_subido = st.file_uploader("Suba a planilha preenchida aqui", type=["xlsx"])
@@ -79,20 +105,18 @@ with col_up:
 # --- SEÇÃO 3: CÁLCULOS E RESULTADOS ---
 if arquivo_subido:
     df = pd.read_excel(arquivo_subido)
-    
     with st.spinner("Processando auditoria fiscal..."):
         # 1. Normalizar nomes de colunas (Maiúsculas e sem espaços)
         df.columns = [c.upper().strip() for c in df.columns]
         
-        # 2. Identificar coluna de valor unitário (Segurança contra KeyError)
+        # 2. Identificar colunas essenciais (Segurança contra KeyError)
         colunas_vlr_possiveis = ['VLR_UNITARIO_MOEDA', 'VLR_UNITARIO', 'VALOR_UNITARIO', 'VALOR']
         col_vlr = next((c for c in colunas_vlr_possiveis if c in df.columns), None)
         
-        # Identificar coluna de quantidade
         col_qtd = next((c for c in ['QTD', 'QUANTIDADE'] if c in df.columns), None)
 
         if col_vlr is None or col_qtd is None:
-            st.error(f"❌ Erro de Colunas: Certifique-se que a planilha tem as colunas 'QTD' e 'VLR_UNITARIO_MOEDA'.")
+            st.error(f"❌ Erro de Colunas: Certifique-se que a planilha tem as colunas 'QTD' e 'VLR_UNITARIO_MOEDA'. Colunas encontradas: {list(df.columns)}")
             st.stop()
 
         # 3. Conversão para BRL e Valor Total dos Itens
@@ -132,24 +156,19 @@ if arquivo_subido:
             st.divider()
             st.success("📝 Espelho da Nota Fiscal Gerado!")
             
-            colunas_resumo = [
-                'DI', 'ADICAO', 'ITEM', 'NCM', 'PRODUTO', 
-                'VLR_ADUANEIRO', 'VLR_II', 'RAT_AFRMM', 'BASE_ICMS', 'ICMS_RECOLHER'
-            ]
-            
-            # Filtra apenas colunas que existem para evitar erros de exibição
-            cols_finais = [c for c in colunas_resumo if c in df.columns]
-            st.dataframe(df[cols_finais].style.format(precision=2), use_container_width=True)
+            colunas_exibicao = ['DI', 'ADICAO', 'ITEM', 'NCM', 'PRODUTO', 'VLR_ADUANEIRO', 'VLR_II', 'RAT_AFRMM', 'BASE_ICMS', 'ICMS_RECOLHER']
+            st.dataframe(df[colunas_exibicao].style.format(precision=2), use_container_width=True)
 
-            # Exportação completa
-            buffer_res = io.BytesIO()
-            with pd.ExcelWriter(buffer_res, engine='openpyxl') as writer:
-                df.to_excel(writer, index=False, sheet_name='Espelho_Arcanum')
+            # --- EXPORTAÇÃO ---
+            col_exp1, col_exp2 = st.columns(2)
+            with col_exp1:
+                buffer_xlsx = io.BytesIO()
+                with pd.ExcelWriter(buffer_xlsx, engine='openpyxl') as writer:
+                    df.to_excel(writer, index=False, sheet_name='Espelho_Arcanum')
+                st.download_button("📥 Baixar Espelho em Excel", buffer_xlsx.getvalue(), "espelho_arcanum_final.xlsx")
             
-            st.download_button(
-                label="📥 Baixar Espelho em Excel",
-                data=buffer_res.getvalue(),
-                file_name="espelho_arcanum_final.xlsx"
-            )
+            with col_exp2:
+                pdf_output = gerar_pdf(df)
+                st.download_button("📥 Baixar PDF (Estilo DANFE)", pdf_output, "espelho_danfe_arcanum.pdf", "application/pdf")
         else:
             st.error("Erro: O Valor Bruto resultou em zero. Verifique o Câmbio e a Planilha.")
