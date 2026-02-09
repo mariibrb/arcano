@@ -20,34 +20,32 @@ class EspelhoDANFE(FPDF):
 
 def gerar_pdf(df_final):
     pdf = EspelhoDANFE()
-    pdf.add_page(orientation='L') # Paisagem para caber todas as colunas
+    pdf.add_page(orientation='L') # Paisagem
     pdf.set_font('Arial', 'B', 8)
     
-    # Definição de Colunas e Larguras para o PDF
+    # Cabeçalho da Tabela no PDF
     colunas_pdf = ['DI', 'ADICAO', 'ITEM', 'PRODUTO', 'VLR_ADUAN', 'VLR_II', 'VLR_IPI', 'BASE_ICMS', 'ICMS_REC']
     larguras = [25, 15, 10, 60, 30, 25, 25, 30, 30]
     
-    # Cabeçalho da Tabela no PDF
     pdf.set_fill_color(230, 230, 230)
     for i, col in enumerate(colunas_pdf):
         pdf.cell(larguras[i], 7, col, 1, 0, 'C', 1)
     pdf.ln()
 
-    # Dados no PDF
+    # Dados no PDF com tratamento para colunas ausentes
     pdf.set_font('Arial', '', 7)
     for index, row in df_final.iterrows():
-        pdf.cell(larguras[0], 6, str(row['DI']), 1)
-        pdf.cell(larguras[1], 6, str(row['ADICAO']), 1, 0, 'C')
-        pdf.cell(larguras[2], 6, str(row['ITEM']), 1, 0, 'C')
-        pdf.cell(larguras[3], 6, str(row['PRODUTO'])[:35], 1)
-        pdf.cell(larguras[4], 6, f"{row['VLR_ADUANEIRO']:.2f}", 1, 0, 'R')
-        pdf.cell(larguras[5], 6, f"{row['VLR_II']:.2f}", 1, 0, 'R')
-        pdf.cell(larguras[6], 6, f"{row['VLR_IPI']:.2f}", 1, 0, 'R')
-        pdf.cell(larguras[7], 6, f"{row['BASE_ICMS']:.2f}", 1, 0, 'R')
-        pdf.cell(larguras[8], 6, f"{row['ICMS_RECOLHER']:.2f}", 1, 0, 'R')
+        pdf.cell(larguras[0], 6, str(row.get('DI', '')), 1)
+        pdf.cell(larguras[1], 6, str(row.get('ADICAO', '')), 1, 0, 'C')
+        pdf.cell(larguras[2], 6, str(row.get('ITEM', '')), 1, 0, 'C')
+        pdf.cell(larguras[3], 6, str(row.get('PRODUTO', ''))[:35], 1)
+        pdf.cell(larguras[4], 6, f"{row.get('VLR_ADUANEIRO', 0):.2f}", 1, 0, 'R')
+        pdf.cell(larguras[5], 6, f"{row.get('VLR_II', 0):.2f}", 1, 0, 'R')
+        pdf.cell(larguras[6], 6, f"{row.get('VLR_IPI', 0):.2f}", 1, 0, 'R')
+        pdf.cell(larguras[7], 6, f"{row.get('BASE_ICMS', 0):.2f}", 1, 0, 'R')
+        pdf.cell(larguras[8], 6, f"{row.get('ICMS_RECOLHER', 0):.2f}", 1, 0, 'R')
         pdf.ln()
         
-    # Retorna os bytes do PDF
     return pdf.output()
 
 st.title("📜 ARCANUM")
@@ -116,8 +114,7 @@ if arquivo_subido:
             st.error(f"❌ Erro de Colunas: Verifique se a planilha tem 'QTD' e 'VLR_UNITARIO_MOEDA'.")
             st.stop()
 
-        df['VLR_UNITARIO_BRL'] = df[col_vlr] * taxa_cambio
-        df['VLR_PROD_TOTAL'] = df[col_qtd] * df['VLR_UNITARIO_BRL']
+        df['VLR_PROD_TOTAL'] = df[col_qtd] * df[col_vlr] * taxa_cambio
         total_geral_prods = df['VLR_PROD_TOTAL'].sum()
         
         if total_geral_prods > 0:
@@ -143,8 +140,11 @@ if arquivo_subido:
             st.divider()
             st.success("📝 Espelho da Nota Fiscal Gerado!")
             
-            col_exib = ['DI', 'ADICAO', 'ITEM', 'NCM', 'PRODUTO', 'VLR_ADUANEIRO', 'VLR_II', 'RAT_AFRMM', 'BASE_ICMS', 'ICMS_RECOLHER']
-            st.dataframe(df[col_exib].style.format(precision=2), use_container_width=True)
+            # --- EXIBIÇÃO SEGURA ---
+            col_exib_base = ['DI', 'ADICAO', 'ITEM', 'NCM', 'PRODUTO', 'VLR_ADUANEIRO', 'VLR_II', 'RAT_AFRMM', 'BASE_ICMS', 'ICMS_RECOLHER']
+            # Filtra apenas as colunas que realmente existem no DataFrame final
+            col_exib_real = [c for c in col_exib_base if c in df.columns]
+            st.dataframe(df[col_exib_real].style.format(precision=2), use_container_width=True)
 
             col_exp1, col_exp2 = st.columns(2)
             with col_exp1:
@@ -154,8 +154,7 @@ if arquivo_subido:
                 st.download_button("📥 Baixar Espelho em Excel", buffer_xlsx.getvalue(), "espelho_arcanum_final.xlsx")
             
             with col_exp2:
-                # O fpdf2 gera o PDF como uma string de bytes ou salva em arquivo
-                # Para o Streamlit, precisamos dos bytes.
+                # Gerar PDF e converter para bytes
                 pdf_output = gerar_pdf(df)
                 st.download_button("📥 Baixar PDF (Estilo DANFE)", bytes(pdf_output), "espelho_danfe_arcanum.pdf", "application/pdf")
         else:
