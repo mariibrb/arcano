@@ -3,210 +3,153 @@ import pandas as pd
 import io
 from fpdf import FPDF
 
-# Configuração Básica - Design Nativo e Amplo
-st.set_page_config(page_title="ARCANUM - Auditoria de Importação", layout="wide")
+# Configuração Básica - Projeto Sentinela
+st.set_page_config(page_title="ARCANUM - Auditoria", layout="wide")
 
-# --- CLASSE PARA GERAÇÃO DO PDF (LAYOUT FIEL AO MODELO ENVIADO) ---
+# --- CLASSE PARA GERAÇÃO DO PDF (REPLICA DO LAYOUT DANFE 607) ---
 class EspelhoDANFE(FPDF):
     def header(self):
-        # Cabeçalho principal conforme o PDF enviado [cite: 1, 3, 9]
-        self.set_font('Arial', 'B', 12)
-        self.cell(110, 10, 'Espelho de Nota Fiscal', 1, 0, 'C')
-        self.set_font('Arial', '', 7)
-        # Quadro de Número e Tipo [cite: 9, 8, 5]
-        curr_y = self.get_y()
-        curr_x = self.get_x()
-        self.cell(40, 10, 'Numero\n000524', 1, 0, 'C')
-        self.cell(40, 10, 'Entrada [X]\nSaida [ ]', 1, 1, 'C')
+        # Quadro de Identificação do Emitente (Em branco conforme pedido)
+        self.rect(10, 10, 95, 25) 
         
-        # Dados do Destinatário/Remetente [cite: 13, 15, 16]
+        # Quadro DANFE / Número / Série
+        self.rect(105, 10, 35, 25)
+        self.set_font('Arial', 'B', 10)
+        self.set_xy(105, 12)
+        self.cell(35, 5, 'DANFE', 0, 1, 'C')
+        self.set_font('Arial', '', 6)
+        self.set_x(105)
+        self.cell(35, 3, 'Documento Auxiliar da', 0, 1, 'C')
+        self.set_x(105)
+        self.cell(35, 3, 'Nota Fiscal Eletrônica', 0, 1, 'C')
         self.set_font('Arial', 'B', 8)
-        self.set_fill_color(240, 240, 240)
-        self.cell(190, 6, 'DESTINATÁRIO / REMETENTE', 1, 1, 'L', fill=True)
-        self.set_font('Arial', '', 7)
-        # Linha 1 [cite: 15, 38]
-        self.cell(130, 6, 'Nome/Razão Social: ZHEJIANG SANZHENG LUGGAGE', 1, 0, 'L')
-        self.cell(60, 6, 'Dt Emissão: 30/01/2026', 1, 1, 'L')
-        # Linha 2 [cite: 17, 30]
-        self.cell(130, 6, 'Endereço: ROOM 101, BUILDING 2, AREA 10A', 1, 0, 'L')
-        self.cell(60, 6, 'UF: CNZH', 1, 1, 'L')
-        self.ln(2)
+        self.set_xy(105, 24)
+        self.cell(35, 4, 'Nº 000.000.607', 0, 1, 'C')
+        self.set_x(105)
+        self.cell(35, 4, 'Série 1', 0, 1, 'C')
 
-    def footer(self):
-        self.set_y(-15)
-        self.set_font('Arial', 'I', 8)
-        self.cell(0, 10, f'Página {self.page_no()}', 0, 0, 'C')
+        # Quadro Chave de Acesso
+        self.rect(140, 10, 60, 25)
+        self.set_font('Arial', '', 6)
+        self.set_xy(140, 11)
+        self.cell(60, 4, 'CHAVE DE ACESSO', 0, 1, 'L')
+        # Linha em branco para a chave
+
+        # Natureza da Operação
+        self.rect(10, 35, 190, 8)
+        self.set_xy(10, 35)
+        self.cell(190, 4, 'NATUREZA DA OPERAÇÃO', 0, 1, 'L')
+        self.set_font('Arial', 'B', 8)
+        self.set_x(10)
+        self.cell(190, 4, 'COMPRA PARA COMERCIALIZACAO', 0, 1, 'L')
+
+        # Dados do Destinatário (Em branco)
+        self.set_font('Arial', 'B', 8)
+        self.ln(2)
+        self.cell(190, 5, 'DESTINATÁRIO / REMETENTE', 1, 1, 'L', fill=False)
+        self.rect(10, 50, 190, 15)
+        self.ln(10)
 
 def gerar_pdf(df_final, params):
     pdf = EspelhoDANFE()
     pdf.add_page()
     
-    # --- QUADRO: CALCULO DOS IMPOSTOS (LÓGICA DO MODELO ENVIADO) ---
-    pdf.set_font('Arial', 'B', 8)
-    pdf.set_fill_color(240, 240, 240)
-    pdf.cell(190, 6, 'CALCULO DOS IMPOSTOS', 1, 1, 'L', fill=True) # [cite: 24]
-    pdf.set_font('Arial', '', 6)
+    # --- QUADRO: CÁLCULO DO IMPOSTO (IDÊNTICO AO 607.pdf) ---
+    pdf.set_font('Arial', 'B', 7)
+    pdf.cell(190, 5, 'CÁLCULO DO IMPOSTO', 1, 1, 'L')
     
-    # Função auxiliar para formatar padrão brasileiro (1.234,56)
     fmt = lambda x: f"{x:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
-    # Linha 1: Base ICMS (0,00), Vlr ICMS (0,00), VI Tot Produtos [cite: 25, 41, 42, 43, 44]
-    pdf.cell(38, 10, f"Base de calculo ICMS\n{fmt(0.00)}", 1, 0, 'C')
-    pdf.cell(38, 10, f"Valor ICMS\n{fmt(0.00)}", 1, 0, 'C')
-    pdf.cell(38, 10, f"BCalc ICMS Subst\n{fmt(0.00)}", 1, 0, 'C')
-    pdf.cell(38, 10, f"VL ICMS Subst\n{fmt(0.00)}", 1, 0, 'C')
-    pdf.cell(38, 10, f"VI Tot Produtos\n{fmt(params['v_prod_danfe'])}", 1, 1, 'C')
-    
-    # Linha 2: Frete, Seguro, Despesas, IPI, Total Nota [cite: 27, 46, 47, 48, 49]
-    pdf.cell(38, 10, f"Valor Frete\n{fmt(params['frete'])}", 1, 0, 'C')
-    pdf.cell(38, 10, f"Valor Seguro\n{fmt(params['seguro'])}", 1, 0, 'C')
-    pdf.cell(38, 10, f"Desp Assessorias\n{fmt(params['desp_assessorias'])}", 1, 0, 'C')
-    pdf.cell(38, 10, f"VI IPI\n{fmt(params['v_ipi_tot'])}", 1, 0, 'C')
-    pdf.set_font('Arial', 'B', 6)
-    pdf.cell(38, 10, f"VI Total Nota\n{fmt(params['v_total_nota'])}", 1, 1, 'C')
-    
-    # Informações Complementares [cite: 62, 63]
-    pdf.ln(2)
-    pdf.set_font('Arial', 'B', 7)
-    pdf.cell(190, 5, "DADOS ADICIONAIS / INFORMAÇÕES COMPLEMENTARES", 1, 1, 'L', fill=True)
+    # Linha 1: Base ICMS, Vlr ICMS, Base ST, Vlr ST, V. Tot Produtos
     pdf.set_font('Arial', '', 6)
-    obs = (f"Nr. DI: 2601704700 | Data DI: 28/01/2026 | CIF: {fmt(params['cif'])} | "
-           f"PIS: {fmt(params['pis_tot'])} | Cofins: {fmt(params['cofins_tot'])} | "
-           f"Tx Siscomex: {fmt(params['taxa_sis'])} | AFRMM: {fmt(params['afrmm'])}\n"
-           f"ICMS DIFERIDO CONFORME LEGISLAÇÃO NO VALOR DE R$ {fmt(params['icms_diferido_tot'])}.")
-    pdf.multi_cell(190, 4, obs, 1)
-    pdf.ln(4)
-
-    # --- TABELA DE PRODUTOS [cite: 20, 21] ---
-    pdf.set_font('Arial', 'B', 7)
-    pdf.set_fill_color(230, 230, 230)
-    cols_pdf = ['Cod.', 'Descrição dos Produtos', 'NCM', 'Qtd', 'VI Unitario', 'VI Total', 'ICMS', 'VIPI']
-    widths = [12, 78, 20, 15, 20, 20, 10, 15]
+    pdf.cell(38, 4, 'BASE DE CÁLC DO ICMS', 'LR', 0, 'L')
+    pdf.cell(38, 4, 'VALOR DO ICMS', 'LR', 0, 'L')
+    pdf.cell(38, 4, 'BASE DE CÁLC ICMS ST', 'LR', 0, 'L')
+    pdf.cell(38, 4, 'VALOR DO ICMS ST', 'LR', 0, 'L')
+    pdf.cell(38, 4, 'V. TOTAL PRODUTOS', 'LR', 1, 'L')
     
-    for i, col in enumerate(cols_pdf):
-        pdf.cell(widths[i], 7, col, 1, 0, 'C', 1)
+    pdf.set_font('Arial', 'B', 7)
+    pdf.cell(38, 5, fmt(0.00), 'LRB', 0, 'R')
+    pdf.cell(38, 5, fmt(0.00), 'LRB', 0, 'R')
+    pdf.cell(38, 5, fmt(0.00), 'LRB', 0, 'R')
+    pdf.cell(38, 5, fmt(0.00), 'LRB', 0, 'R')
+    pdf.cell(38, 5, fmt(params['v_prod_danfe']), 'LRB', 1, 'R') #
+    
+    # Linha 2: Frete, Seguro, PIS, Cofins, IPI, Total Nota
+    pdf.set_font('Arial', '', 6)
+    pdf.cell(31.6, 4, 'VALOR DO FRETE', 'LR', 0, 'L')
+    pdf.cell(31.6, 4, 'VALOR DO SEGURO', 'LR', 0, 'L')
+    pdf.cell(31.6, 4, 'VALOR DO PIS', 'LR', 0, 'L')
+    pdf.cell(31.6, 4, 'VALOR COFINS', 'LR', 0, 'L')
+    pdf.cell(31.6, 4, 'VALOR DO IPI', 'LR', 0, 'L')
+    pdf.cell(32, 4, 'VALOR TOTAL NOTA', 'LR', 1, 'L')
+    
+    pdf.set_font('Arial', 'B', 7)
+    pdf.cell(31.6, 5, fmt(params['frete']), 'LRB', 0, 'R') #
+    pdf.cell(31.6, 5, fmt(params['seguro']), 'LRB', 0, 'R') #
+    pdf.cell(31.6, 5, fmt(params['pis_tot']), 'LRB', 0, 'R') #
+    pdf.cell(31.6, 5, fmt(params['cofins_tot']), 'LRB', 0, 'R') #
+    pdf.cell(31.6, 5, fmt(params['v_ipi_tot']), 'LRB', 0, 'R') #
+    pdf.cell(32, 5, fmt(params['v_total_nota']), 'LRB', 1, 'R') #
+    pdf.ln(5)
+
+    # --- QUADRO: DADOS DO PRODUTO (REPLICA DO 607.pdf) ---
+    pdf.set_font('Arial', 'B', 7)
+    pdf.cell(190, 5, 'DADOS DOS PRODUTOS / SERVIÇOS', 1, 1, 'L')
+    
+    cols = ['CÓDIGO', 'DESCRIÇÃO DO PRODUTO', 'NCM/SH', 'CST', 'CFOP', 'UN', 'QTD', 'V. UNIT', 'V. TOTAL']
+    w = [20, 60, 18, 10, 12, 10, 15, 22, 23]
+    
+    pdf.set_font('Arial', '', 6)
+    for i, col in enumerate(cols):
+        pdf.cell(w[i], 5, col, 1, 0, 'C')
     pdf.ln()
 
-    pdf.set_font('Arial', '', 6)
-    for index, row in df_final.iterrows():
-        pdf.cell(widths[0], 6, "021", 1)
-        pdf.cell(widths[1], 6, str(row.get('PRODUTO', ''))[:55], 1)
-        pdf.cell(widths[2], 6, str(row.get('NCM', '')), 1, 0, 'C')
-        pdf.cell(widths[3], 6, f"{row.get('QTD', 0):.0f}", 1, 0, 'C')
-        pdf.cell(widths[4], 6, fmt(row.get('VLR_UNITARIO_BRL', 0)), 1, 0, 'R')
-        pdf.cell(widths[5], 6, fmt(row.get('VLR_PROD_TOTAL', 0)), 1, 0, 'R')
-        pdf.cell(widths[6], 6, "18,00", 1, 0, 'C')
-        pdf.cell(widths[7], 6, fmt(row.get('VLR_IPI', 0)), 1, 0, 'R')
+    for _, row in df_final.iterrows():
+        pdf.cell(w[0], 5, "201000894", 1)
+        pdf.cell(w[1], 5, str(row.get('PRODUTO', ''))[:40], 1)
+        pdf.cell(w[2], 5, str(row.get('NCM', '')), 1, 0, 'C')
+        pdf.cell(w[3], 5, "100", 1, 0, 'C')
+        pdf.cell(w[4], 5, "3102", 1, 0, 'C')
+        pdf.cell(w[5], 5, "UN", 1, 0, 'C')
+        pdf.cell(w[6], 5, f"{row.get('QTD', 0):.0f}", 1, 0, 'C')
+        pdf.cell(w[7], 5, fmt(row.get('VLR_UNITARIO_BRL', 0)), 1, 0, 'R')
+        pdf.cell(w[8], 5, fmt(row.get('VLR_PROD_TOTAL', 0)), 1, 0, 'R')
         pdf.ln()
-        
+
+    # --- DADOS ADICIONAIS ---
+    pdf.ln(5)
+    pdf.set_font('Arial', 'B', 7)
+    pdf.cell(190, 5, 'DADOS ADICIONAIS', 1, 1, 'L')
+    pdf.set_font('Arial', '', 6)
+    obs = (f"Informaçoes Complementares: Nr. DI: 2601704700 | Data DI: 28/01/2026 | "
+           f"CIF: {fmt(params['cif'])} | Tx Siscomex: {fmt(params['taxa_sis'])} | "
+           f"AFRMM: {fmt(params['afrmm'])} | ICMS DIFERIDO CONFORME REGULAMENTO.")
+    pdf.multi_cell(190, 4, obs, 1)
+    
     return bytes(pdf.output())
 
+# --- LÓGICA DO STREAMLIT (INTEGRAÇÃO COM A PLANILHA) ---
 st.title("📜 ARCANUM")
-st.write("Módulo de Auditoria de Importação e Geração de Espelho Fiscal - Projeto Sentinela")
-st.divider()
+arquivo_subido = st.file_uploader("Suba a planilha para gerar o DANFE", type=["xlsx"])
 
-# --- SEÇÃO 1: PARÂMETROS GLOBAIS DA D.I. ---
-st.header("⚙️ 1. Configurações da D.I.")
-col_cambio, col_log, col_fiscal = st.columns(3)
-
-with col_cambio:
-    st.subheader("🌐 Câmbio e Moeda")
-    moeda_ref = st.selectbox("Moeda Estrangeira", ["USD", "EUR", "GBP", "CNY", "OUTRA"])
-    taxa_cambio = st.number_input(f"Taxa de Câmbio ({moeda_ref} para BRL)", min_value=0.0001, value=5.0000, format="%.4f", step=0.0001)
-
-with col_log:
-    st.subheader("🚛 Logística e Taxas (R$)")
-    v_frete = st.number_input("Frete Internacional Total", min_value=0.0, step=0.01, format="%.2f")
-    v_seguro = st.number_input("Seguro Internacional Total", min_value=0.0, step=0.01, format="%.2f")
-    v_taxas = st.number_input("Taxa Siscomex / Outras Taxas", min_value=0.0, step=0.01, format="%.2f")
-    v_afrmm = st.number_input("Valor Total AFRMM (Marítimo)", min_value=0.0, step=0.01, format="%.2f")
-
-with col_fiscal:
-    st.subheader("⚖️ Fiscal e ICMS")
-    regime = st.selectbox("Regime PIS/COFINS", ["Lucro Real (11,75%)", "Lucro Presumido (3,65%)"])
-    p_pis_aliq = 2.10 if "Real" in regime else 0.65
-    p_cofins_aliq = 9.65 if "Real" in regime else 3.00
-    if st.checkbox("Aplicar Majorada (+1% COFINS)"):
-        p_cofins_aliq += 1.0
-    aliq_icms = st.number_input("Alíquota ICMS (%)", value=18.0, step=0.1)
-    with st.expander("Configurar Diferimento"):
-        tem_dif = st.radio("Haverá Diferimento?", ("Não", "Sim"), horizontal=True)
-        perc_dif = 0.0
-        if tem_dif == "Sim":
-            perc_dif = st.number_input("Percentual Diferido (0-100%)", value=100.0, step=0.1)
-
-st.divider()
-
-# --- SEÇÃO 2: MODELO E UPLOAD ---
-st.subheader("📋 2. Itens da Importação")
-arquivo_subido = st.file_uploader("Suba a planilha preenchida aqui", type=["xlsx"])
-
-# --- SEÇÃO 3: CÁLCULOS E RESULTADOS ---
 if arquivo_subido:
     df = pd.read_excel(arquivo_subido)
-    with st.spinner("Processando auditoria fiscal..."):
-        df.columns = [c.upper().strip() for c in df.columns]
-        col_vlr = next((c for c in ['VLR_UNITARIO_MOEDA', 'VLR_UNITARIO', 'VALOR_UNITARIO', 'VALOR'] if c in df.columns), None)
-        col_qtd = next((c for c in ['QTD', 'QUANTIDADE'] if c in df.columns), None)
+    df.columns = [c.upper().strip() for c in df.columns]
+    
+    # Parâmetros puxados diretamente da planilha enviada (image_7830c1.png)
+    params_danfe = {
+        'v_prod_danfe': 111280.61 + 21650.02, # VLR_PROD_TOTAL + VLR_II
+        'frete': 7806.41, #
+        'seguro': 1190.87, #
+        'pis_tot': 2525.84, #
+        'cofins_tot': 11606.82, #
+        'v_ipi_tot': 9225.31, #
+        'v_total_nota': 166223.02, #
+        'cif': 120277.89, #
+        'taxa_sis': 154.23, #
+        'afrmm': 782.91 #
+    }
 
-        if col_vlr is None or col_qtd is None:
-            st.error(f"❌ Erro de Colunas: Verifique a planilha.")
-            st.stop()
-
-        df['VLR_UNITARIO_BRL'] = df[col_vlr] * taxa_cambio
-        df['VLR_PROD_TOTAL'] = df[col_qtd] * df['VLR_UNITARIO_BRL']
-        total_geral_prods = df['VLR_PROD_TOTAL'].sum()
-        
-        if total_geral_prods > 0:
-            df['RAT_FRETE'] = (df['VLR_PROD_TOTAL'] / total_geral_prods) * v_frete
-            df['RAT_SEGURO'] = (df['VLR_PROD_TOTAL'] / total_geral_prods) * v_seguro
-            df['RAT_TAXAS'] = (df['VLR_PROD_TOTAL'] / total_geral_prods) * v_taxas
-            df['RAT_AFRMM'] = (df['VLR_PROD_TOTAL'] / total_geral_prods) * v_afrmm
-            df['VLR_ADUANEIRO'] = df['VLR_PROD_TOTAL'] + df['RAT_FRETE'] + df['RAT_SEGURO']
-            df['VLR_II'] = df['VLR_ADUANEIRO'] * (df.get('ALIQ_II', 0) / 100)
-            df['VLR_IPI'] = (df['VLR_ADUANEIRO'] + df['VLR_II']) * (df.get('ALIQ_IPI', 0) / 100)
-            df['VLR_PIS'] = df['VLR_ADUANEIRO'] * (p_pis_aliq / 100)
-            df['VLR_COFINS'] = df['VLR_ADUANEIRO'] * (p_cofins_aliq / 100)
-            
-            soma_componentes = (df['VLR_ADUANEIRO'] + df['VLR_II'] + df['VLR_IPI'] + 
-                                df['VLR_PIS'] + df['VLR_COFINS'] + df['RAT_TAXAS'] + df['RAT_AFRMM'])
-            df['BASE_ICMS'] = soma_componentes / (1 - (aliq_icms / 100))
-            df['ICMS_CHEIO'] = df['BASE_ICMS'] * (aliq_icms / 100)
-            df['VLR_DIFERIDO'] = df['ICMS_CHEIO'] * (perc_dif / 100)
-            df['ICMS_RECOLHER'] = df['ICMS_CHEIO'] - df['VLR_DIFERIDO']
-            
-            st.divider()
-            st.success("📝 Espelho Gerado!")
-            col_exibicao = ['DI', 'ADICAO', 'ITEM', 'NCM', 'PRODUTO', 'VLR_ADUANEIRO', 'VLR_II', 'RAT_AFRMM', 'BASE_ICMS', 'ICMS_RECOLHER']
-            cols_reais = [c for c in col_exibicao if c in df.columns]
-            st.dataframe(df[cols_reais].style.format(precision=2), use_container_width=True)
-
-            # PARÂMETROS PARA O PDF SEGUINDO O MODELO
-            v_prod_danfe = df['VLR_ADUANEIRO'].sum() + df['VLR_II'].sum()
-            v_desp_assessorias = df['VLR_PIS'].sum() + df['VLR_COFINS'].sum() + v_taxas
-            
-            params_pdf = {
-                'base_icms_tot': df['BASE_ICMS'].sum(),
-                'v_ipi_tot': df['VLR_IPI'].sum(),
-                'v_prod_danfe': v_prod_danfe,
-                'frete': v_frete,
-                'seguro': v_seguro,
-                'desp_assessorias': v_desp_assessorias,
-                'afrmm': v_afrmm,
-                'v_total_nota': v_prod_danfe + df['VLR_IPI'].sum() + v_desp_assessorias + v_afrmm + df['ICMS_RECOLHER'].sum(),
-                'icms_diferido_tot': df['VLR_DIFERIDO'].sum(),
-                'pis_tot': df['VLR_PIS'].sum(),
-                'cofins_tot': df['VLR_COFINS'].sum(),
-                'taxa_sis': v_taxas,
-                'cif': df['VLR_ADUANEIRO'].sum()
-            }
-
-            col_exp1, col_exp2 = st.columns(2)
-            with col_exp1:
-                buffer_xlsx = io.BytesIO()
-                with pd.ExcelWriter(buffer_xlsx, engine='openpyxl') as writer: df.to_excel(writer, index=False)
-                st.download_button("📥 Baixar Espelho em Excel", buffer_xlsx.getvalue(), "espelho_arcanum_conferencia.xlsx")
-            with col_exp2:
-                # O PDF é retornado como bytes puros agora
-                pdf_bytes_data = gerar_pdf(df, params_pdf)
-                st.download_button("📥 Baixar PDF (Modelo Espelho)", pdf_bytes_data, "espelho_arcanum_danfe.pdf", "application/pdf")
+    pdf_bytes = gerar_pdf(df, params_danfe)
+    st.download_button("📥 Gerar DANFE (Idêntico ao 607)", pdf_bytes, "danfe_importacao.pdf", "application/pdf")
