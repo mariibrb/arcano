@@ -64,7 +64,7 @@ def gerar_pdf(df_final, params):
     pdf.cell(38, 5, fmt(params['v_icms_header']), 'LRB', 0, 'R') 
     pdf.cell(38, 5, fmt(0.00), 'LRB', 0, 'R')
     pdf.cell(38, 5, fmt(0.00), 'LRB', 0, 'R')
-    pdf.cell(38, 5, fmt(params['v_prod_composto']), 'LRB', 1, 'R') # Aduaneiro+II+PIS+COFINS
+    pdf.cell(38, 5, fmt(params['v_prod_composto']), 'LRB', 1, 'R') 
     
     pdf.set_font('Arial', '', 6)
     pdf.cell(38, 4, 'VALOR DO FRETE', 'LR', 0, 'L')
@@ -76,17 +76,22 @@ def gerar_pdf(df_final, params):
     pdf.set_font('Arial', 'B', 7)
     pdf.cell(38, 5, fmt(0.00), 'LRB', 0, 'R')
     pdf.cell(38, 5, fmt(0.00), 'LRB', 0, 'R')
-    pdf.cell(38, 5, fmt(params['outras_desp_total']), 'LRB', 0, 'R') # AFRMM + Taxas
+    pdf.cell(38, 5, fmt(params['outras_desp_total']), 'LRB', 0, 'R') 
     pdf.cell(38, 5, fmt(params['v_ipi_tot']), 'LRB', 0, 'R') 
     pdf.cell(38, 5, fmt(params['v_total_nota']), 'LRB', 1, 'R')
     pdf.ln(5)
 
-    # --- QUADRO: DADOS DO PRODUTO ---
+    # --- QUADRO: DADOS DO PRODUTO (TRIBUTOS POR ITEM) ---
     pdf.set_font('Arial', 'B', 7)
     pdf.cell(190, 5, 'DADOS DOS PRODUTOS / SERVIÇOS', 1, 1, 'L')
-    cols = [('CÓDIGO', 15), ('DESCRIÇÃO', 45), ('NCM', 15), ('CST', 8), ('CFOP', 10), ('QTD', 10), ('V.UNIT', 15), ('V.TOT', 15), ('BC.ICMS', 15), ('V.ICMS', 14), ('V.IPI', 13), ('%ICMS', 10), ('%IPI', 10)]
+    cols = [
+        ('CÓDIGO', 15), ('DESCRIÇÃO', 45), ('NCM', 15), ('CST', 8), ('CFOP', 10), 
+        ('QTD', 10), ('V.UNIT', 15), ('V.TOT', 15), ('BC.ICMS', 15), ('V.ICMS', 14), 
+        ('V.IPI', 13), ('%ICMS', 10), ('%IPI', 10)
+    ]
     pdf.set_font('Arial', '', 5)
-    for txt, w in cols: pdf.cell(w, 5, txt, 1, 0, 'C')
+    for txt, w in cols:
+        pdf.cell(w, 5, txt, 1, 0, 'C')
     pdf.ln()
 
     for _, row in df_final.iterrows():
@@ -138,14 +143,29 @@ with col_fiscal:
     perc_dif = st.number_input("Percentual Diferido (%)", min_value=0.0, value=0.0, step=0.1) if tem_dif == "Sim" else 0.0
 
 st.divider()
-arquivo_subido = st.file_uploader("Suba a planilha de itens", type=["xlsx"])
 
-# --- LÓGICA DE CÁLCULO ---
+# --- SEÇÃO 2: MODELO E UPLOAD (RESTAURADO) ---
+st.subheader("📋 2. Itens da Importação")
+col_mod, col_up = st.columns([1, 2])
+with col_mod:
+    df_modelo = pd.DataFrame({
+        'PRODUTO': ['ITEM EXEMPLO'], 'NCM': ['0000.00.00'], 'QTD': [0], 
+        'VLR_UNITARIO_MOEDA': [0.0], 'ALIQ_II': [0.0], 'ALIQ_IPI': [0.0]
+    })
+    buffer_mod = io.BytesIO()
+    with pd.ExcelWriter(buffer_mod, engine='openpyxl') as writer: 
+        df_modelo.to_excel(writer, index=False)
+    st.download_button(label="📥 Baixar Planilha Modelo", data=buffer_mod.getvalue(), file_name="modelo_arcanum.xlsx")
+
+with col_up:
+    arquivo_subido = st.file_uploader("Suba a planilha preenchida aqui", type=["xlsx"])
+
+# --- SEÇÃO 3: CÁLCULOS DINÂMICOS ---
 if arquivo_subido and taxa_cambio > 0:
     df = pd.read_excel(arquivo_subido)
     df.columns = [c.upper().strip() for c in df.columns]
     
-    col_vlr = next((c for c in ['VLR_UNITARIO_MOEDA', 'VLR_UNITARIO', 'VALOR'] if c in df.columns), None)
+    col_vlr = next((c for c in ['VLR_UNITARIO_MOEDA', 'VLR_UNITARIO', 'VALOR_UNITARIO', 'VALOR'] if c in df.columns), None)
     col_qtd = next((c for c in ['QTD', 'QUANTIDADE'] if c in df.columns), None)
 
     if col_vlr and col_qtd:
@@ -153,7 +173,7 @@ if arquivo_subido and taxa_cambio > 0:
         df['VLR_PROD_TOTAL'] = df[col_qtd] * df['VLR_UNITARIO_BRL']
         total_merc_brl = df['VLR_PROD_TOTAL'].sum()
         
-        # Rateios Proporcionais
+        # Rateios Proporcionais para base tributária
         fator = df['VLR_PROD_TOTAL'] / total_merc_brl if total_merc_brl > 0 else 0
         df['FRETE_ITEM'] = v_frete * fator
         df['SEGURO_ITEM'] = v_seguro * fator
@@ -173,16 +193,17 @@ if arquivo_subido and taxa_cambio > 0:
         # V. Total Produtos = Valor Aduaneiro + II + PIS + COFINS
         v_prod_composto = df['VALOR_ADUANEIRO'].sum() + df['VLR_II_ITEM'].sum() + df['VLR_PIS_ITEM'].sum() + df['VLR_COFINS_ITEM'].sum()
         
-        # Outras Despesas = AFRMM + Taxas
+        # Outras Despesas = AFRMM + Taxas Siscomex
         outras_desp_total = v_afrmm + v_taxas
         v_ipi_tot = df['VLR_IPI_ITEM'].sum()
         
-        # ICMS e Total
+        # ICMS e Total NF
         base_icms_real = (v_prod_composto + outras_desp_total + v_ipi_tot) / (1 - (aliq_icms/100)) if aliq_icms > 0 else 0
         v_icms_cheio = base_icms_real * (aliq_icms/100)
         v_icms_diferido = v_icms_cheio * (perc_dif/100)
         v_icms_recolher = v_icms_cheio - v_icms_diferido
 
+        # Detalhamento para Tabela do PDF
         df['BC_ICMS_ITEM'] = 0.00 if tem_dif == "Sim" else (df['VLR_PROD_TOTAL'] / total_merc_brl) * base_icms_real
         df['V_ICMS_ITEM'] = df['BC_ICMS_ITEM'] * (aliq_icms/100) if tem_dif == "Não" else 0.00
 
@@ -200,12 +221,12 @@ if arquivo_subido and taxa_cambio > 0:
             'v_total_nota': v_prod_composto + v_ipi_tot + outras_desp_total + (0 if tem_dif == "Sim" else v_icms_recolher)
         }
 
-        st.success("✅ Matemática de agregação corrigida!")
-        col1, col2 = st.columns(2)
-        with col1:
+        st.success("✅ Cálculos processados e Modelo restaurado!")
+        col_exp1, col_exp2 = st.columns(2)
+        with col_exp1:
             buffer_xlsx = io.BytesIO()
             with pd.ExcelWriter(buffer_xlsx, engine='openpyxl') as writer: df.to_excel(writer, index=False)
-            st.download_button("📥 Baixar Excel", buffer_xlsx.getvalue(), "espelho_conferencia.xlsx")
-        with col2:
+            st.download_button("📥 Baixar Espelho Excel", buffer_xlsx.getvalue(), "espelho_conferencia.xlsx")
+        with col_exp2:
             pdf_bytes = gerar_pdf(df, params_pdf)
-            st.download_button("📥 Baixar PDF (Modelo 607)", pdf_bytes, "danfe_arcanum.pdf", "application/pdf")
+            st.download_button("📥 Baixar PDF (DANFE 0)", pdf_bytes, "danfe_arcanum.pdf", "application/pdf")
