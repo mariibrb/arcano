@@ -82,6 +82,7 @@ def gerar_pdf(df_final, params):
         pdf.cell(widths[7], 6, f"{row.get('VLR_IPI', 0):.2f}", 1, 0, 'R')
         pdf.ln()
         
+    # CORREÇÃO DEFINITIVA: Retorna os bytes diretamente (compatível com Streamlit 1.30+)
     return pdf.output()
 
 st.title("📜 ARCANUM")
@@ -159,7 +160,7 @@ if arquivo_subido:
             df['ICMS_RECOLHER'] = df['ICMS_CHEIO'] - df['VLR_DIFERIDO']
             
             st.divider()
-            st.success("📝 Espelho da Nota Fiscal Gerado!")
+            st.success("📝 Espelho Gerado!")
             col_exibicao = ['DI', 'ADICAO', 'ITEM', 'NCM', 'PRODUTO', 'VLR_ADUANEIRO', 'VLR_II', 'RAT_AFRMM', 'BASE_ICMS', 'ICMS_RECOLHER']
             cols_reais = [c for c in col_exibicao if c in df.columns]
             st.dataframe(df[cols_reais].style.format(precision=2), use_container_width=True)
@@ -173,7 +174,7 @@ if arquivo_subido:
                 'v_ipi_tot': df['VLR_IPI'].sum(),
                 'v_prod_danfe': v_prod_danfe,
                 'afrmm': v_afrmm,
-                'v_total_nota': v_prod_danfe + df['VLR_IPI'].sum() + v_afrmm + df['ICMS_RECOLHER'].sum(),
+                'v_total_nota': v_prod_danfe + df['VLR_IPI'].sum() + v_afrmm + df['ICMS_RECOLHER'].sum(), #
                 'icms_diferido_tot': df['VLR_DIFERIDO'].sum(),
                 'pis_tot': df['VLR_PIS'].sum(),
                 'cofins_tot': df['VLR_COFINS'].sum(),
@@ -186,6 +187,6 @@ if arquivo_subido:
                 with pd.ExcelWriter(buffer_xlsx, engine='openpyxl') as writer: df.to_excel(writer, index=False)
                 st.download_button("📥 Baixar Espelho em Excel", buffer_xlsx.getvalue(), "espelho_arcanum.xlsx")
             with col_exp2:
-                # Na fpdf2 o output() sem parâmetros retorna os bytes diretamente
-                pdf_output = gerar_pdf(df, params_pdf)
-                st.download_button("📥 Baixar PDF (Padrão Legislativo)", pdf_output, "espelho_arcanum_danfe.pdf", "application/pdf")
+                # O PDF agora é gerado corretamente como bytes puros
+                pdf_bytes = gerar_pdf(df, params_pdf)
+                st.download_button("📥 Baixar PDF (Padrão Legislativo)", pdf_bytes, "espelho_arcanum_danfe.pdf", "application/pdf")
