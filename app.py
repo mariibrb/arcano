@@ -12,9 +12,14 @@ class EspelhoDANFE(FPDF):
         # --- ACRÉSCIMO: Tarja Diagonal Vermelha Transparente CENTRALIZADA ---
         self.set_font('Arial', 'B', 35)
         self.set_text_color(240, 200, 200) # Vermelho bem claro/transparente
-        # Rotação 45 graus no centro da folha A4 (105x148.5)
+        
+        texto_tarja = "SEM VALOR FISCAL - CONFERÊNCIA"
+        largura_texto = self.get_string_width(texto_tarja)
+        
+        # Rotação 45 graus no centro exato da folha A4 (105x148.5)
         with self.rotation(45, 105, 148.5):
-            self.text(15, 148.5, "SEM VALOR FISCAL - CONFERÊNCIA")
+            # Posicionamento milimétrico para centralizar a string no eixo da rotação
+            self.text(105 - (largura_texto / 2), 148.5, texto_tarja)
         
         # Restaura cor para o layout original
         self.set_text_color(0, 0, 0)
@@ -95,7 +100,6 @@ def gerar_pdf(df_final, params):
     pdf.set_font('Arial', 'B', 7)
     pdf.cell(190, 5, 'DADOS DOS PRODUTOS / SERVIÇOS', 1, 1, 'L')
     
-    # Larguras recalculadas para somar 190mm e alinhar colunas como V.IPI
     cols = [
         ('CÓDIGO', 12), ('DESCRIÇÃO', 48), ('NCM', 15), ('CST', 8), ('CFOP', 10), 
         ('QTD', 10), ('V.UNIT', 14), ('V.TOT', 18), ('BC.ICMS', 15), ('V.ICMS', 13), 
@@ -117,10 +121,10 @@ def gerar_pdf(df_final, params):
         pdf.cell(14, 5, fmt(row.get('VLR_UNITARIO_BRL', 0)), 1, 0, 'R')
         pdf.cell(18, 5, fmt(row.get('VALOR_PRODUTO_NF_ITEM', 0)), 1, 0, 'R')
         pdf.cell(15, 5, fmt(row.get('BC_ICMS_ITEM', 0.00)), 1, 0, 'R') 
-        pdf.cell(13, 5, fmt(row.get('V_ICMS_ITEM', 0.00)), 1, 0, 'R') 
+        pdf.cell(14, 5, fmt(row.get('V_ICMS_ITEM', 0.00)), 1, 0, 'R') 
         pdf.cell(13, 5, fmt(row.get('VLR_IPI_ITEM', 0)), 1, 0, 'R')
-        pdf.cell(7, 5, f"{params['aliq_icms_val']:.0f}%", 1, 0, 'C')
-        pdf.cell(7, 5, f"{row.get('ALIQ_IPI', 0):.1f}%", 1, 0, 'C')
+        pdf.cell(10, 5, f"{params['aliq_icms_val']:.0f}%", 1, 0, 'C')
+        pdf.cell(10, 5, f"{row.get('ALIQ_IPI', 0):.1f}%", 1, 0, 'C')
         pdf.ln()
 
     # --- DADOS ADICIONAIS ---
