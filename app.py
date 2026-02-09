@@ -9,13 +9,13 @@ st.set_page_config(page_title="ARCANUM - Auditoria de Importação", layout="wid
 # --- CLASSE PARA GERAÇÃO DO PDF (LAYOUT FIEL AO MODELO ENVIADO) ---
 class EspelhoDANFE(FPDF):
     def header(self):
-        # Cabeçalho principal
+        # Cabeçalho principal conforme o PDF enviado
         self.set_font('Arial', 'B', 14)
         self.cell(130, 15, 'Espelho de Nota Fiscal', 1, 0, 'C')
         self.set_font('Arial', '', 8)
         self.cell(60, 15, 'Entrada [X] Saída [ ]', 1, 1, 'C')
         
-        # Dados do Destinatário (Baseado no seu modelo)
+        # Dados do Destinatário/Remetente
         self.set_font('Arial', 'B', 8)
         self.set_fill_color(240, 240, 240)
         self.cell(190, 8, 'DESTINATÁRIO / REMETENTE', 1, 1, 'L', fill=True)
@@ -32,26 +32,25 @@ def gerar_pdf(df_final, params):
     pdf = EspelhoDANFE()
     pdf.add_page()
     
-    # --- DADOS DA DI (DADOS ADICIONAIS) ---
+    # --- DADOS TOTAIS DOS IMPOSTOS GLOBAIS ---
     pdf.set_font('Arial', 'B', 8)
     pdf.set_fill_color(240, 240, 240)
-    pdf.cell(190, 8, 'DADOS ADICIONAIS / IMPOSTOS GLOBAIS', 1, 1, 'L', fill=True)
+    pdf.cell(190, 8, 'DADOS ADICIONAIS / IMPOSTOS GLOBAIS DA NOTA', 1, 1, 'L', fill=True)
     pdf.set_font('Arial', '', 8)
-    pdf.cell(63, 8, f"Nr. DI: {params['di_num']}", 1, 0)
-    pdf.cell(63, 8, f"Data DI: {params['di_data']}", 1, 0)
-    pdf.cell(64, 8, f"AFRMM: {params['afrmm']:.2f}", 1, 1)
     
-    pdf.cell(63, 8, f"PIS: {params['pis_tot']:.2f}", 1, 0)
-    pdf.cell(63, 8, f"Cofins: {params['cofins_tot']:.2f}", 1, 0)
-    pdf.cell(64, 8, f"Taxa Siscomex: {params['taxa_sis']:.2f}", 1, 1)
+    pdf.cell(63, 8, f"AFRMM Total: {params['afrmm']:.2f}", 1, 0)
+    pdf.cell(63, 8, f"PIS Total: {params['pis_tot']:.2f}", 1, 0)
+    pdf.cell(64, 8, f"Cofins Total: {params['cofins_tot']:.2f}", 1, 1)
+    
+    pdf.cell(190, 8, f"Taxa Siscomex / Outras Taxas: {params['taxa_sis']:.2f}", 1, 1)
     pdf.ln(5)
 
     # --- TABELA DE PRODUTOS ---
     pdf.set_font('Arial', 'B', 7)
     pdf.set_fill_color(230, 230, 230)
-    # Colunas conforme o seu PDF: Cod, Descrição, NCM, Qtd, Vl Unit, Vl Tot, ICMS, IPI
-    cols = ['Cod', 'Descricao', 'NCM', 'Qtd', 'Vl Unit', 'Vl Tot', 'ICMS%', 'IPI%', 'ICMS Rec']
-    widths = [10, 55, 20, 15, 20, 20, 15, 15, 20]
+    # Colunas conforme o seu PDF
+    cols = ['DI', 'Ad.', 'Descricao', 'NCM', 'Qtd', 'Vl Unit (BRL)', 'Vl Tot (BRL)', 'ICMS Rec']
+    widths = [25, 12, 50, 20, 13, 25, 25, 20]
     
     for i, col in enumerate(cols):
         pdf.cell(widths[i], 7, col, 1, 0, 'C', 1)
@@ -59,15 +58,14 @@ def gerar_pdf(df_final, params):
 
     pdf.set_font('Arial', '', 6)
     for index, row in df_final.iterrows():
-        pdf.cell(widths[0], 6, str(row.get('ITEM', index+1)), 1, 0, 'C')
-        pdf.cell(widths[1], 6, str(row.get('PRODUTO', ''))[:40], 1)
-        pdf.cell(widths[2], 6, str(row.get('NCM', '')), 1, 0, 'C')
-        pdf.cell(widths[3], 6, str(row.get('QTD', 0)), 1, 0, 'C')
-        pdf.cell(widths[4], 6, f"{row.get('VLR_UNITARIO_BRL', 0):.2f}", 1, 0, 'R')
-        pdf.cell(widths[5], 6, f"{row.get('VLR_PROD_TOTAL', 0):.2f}", 1, 0, 'R')
-        pdf.cell(widths[6], 6, f"{params['aliq_icms']:.2f}", 1, 0, 'C')
-        pdf.cell(widths[7], 6, f"{row.get('ALIQ_IPI', 0):.2f}", 1, 0, 'C')
-        pdf.cell(widths[8], 6, f"{row.get('ICMS_RECOLHER', 0):.2f}", 1, 0, 'R')
+        pdf.cell(widths[0], 6, str(row.get('DI', '')), 1)
+        pdf.cell(widths[1], 6, str(row.get('ADICAO', '')), 1, 0, 'C')
+        pdf.cell(widths[2], 6, str(row.get('PRODUTO', ''))[:35], 1)
+        pdf.cell(widths[3], 6, str(row.get('NCM', '')), 1, 0, 'C')
+        pdf.cell(widths[4], 6, str(row.get('QTD', 0)), 1, 0, 'C')
+        pdf.cell(widths[5], 6, f"{row.get('VLR_UNITARIO_BRL', 0):.2f}", 1, 0, 'R')
+        pdf.cell(widths[6], 6, f"{row.get('VLR_PROD_TOTAL', 0):.2f}", 1, 0, 'R')
+        pdf.cell(widths[7], 6, f"{row.get('ICMS_RECOLHER', 0):.2f}", 1, 0, 'R')
         pdf.ln()
         
     return pdf.output()
@@ -84,8 +82,6 @@ with col_cambio:
     st.subheader("🌐 Câmbio e Moeda")
     moeda_ref = st.selectbox("Moeda Estrangeira", ["USD", "EUR", "GBP", "CNY", "OUTRA"])
     taxa_cambio = st.number_input(f"Taxa de Câmbio ({moeda_ref} para BRL)", min_value=0.0001, value=5.0000, format="%.4f", step=0.0001)
-    di_num = st.text_input("Número da DI", "2601704700")
-    di_data = st.text_input("Data da DI", "28/01/2026")
 
 with col_log:
     st.subheader("🚛 Logística e Taxas (R$)")
@@ -116,8 +112,8 @@ col_mod, col_up = st.columns([1, 2])
 
 with col_mod:
     df_modelo = pd.DataFrame({
-        'DI': ['26/0000001-0'], 'ADICAO': ['001'], 'ITEM': [1], 'NCM': ['42021210'],
-        'PRODUTO': ['MALAS DE BORDO REVESTIDAS'], 'QTD': [495], 'VLR_UNITARIO_MOEDA': [257.83], 'ALIQ_II': [14.0], 'ALIQ_IPI': [6.5]
+        'DI': ['26/0000001-0'], 'ADICAO': ['001'], 'ITEM': [1], 'NCM': ['8517.62.77'],
+        'PRODUTO': ['Exemplo de Item'], 'QTD': [10], 'VLR_UNITARIO_MOEDA': [300.00], 'ALIQ_II': [14.0], 'ALIQ_IPI': [5.0]
     })
     buffer_mod = io.BytesIO()
     with pd.ExcelWriter(buffer_mod, engine='openpyxl') as writer:
@@ -168,9 +164,10 @@ if arquivo_subido:
 
             # Parâmetros para o PDF
             params_pdf = {
-                'di_num': di_num, 'di_data': di_data, 'afrmm': v_afrmm,
-                'pis_tot': df['VLR_PIS'].sum(), 'cofins_tot': df['VLR_COFINS'].sum(),
-                'taxa_sis': v_taxas, 'aliq_icms': aliq_icms
+                'afrmm': v_afrmm,
+                'pis_tot': df['VLR_PIS'].sum(),
+                'cofins_tot': df['VLR_COFINS'].sum(),
+                'taxa_sis': v_taxas
             }
 
             col_exp1, col_exp2 = st.columns(2)
