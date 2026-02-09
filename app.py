@@ -9,37 +9,22 @@ st.set_page_config(page_title="ARCANUM - Auditoria de Importação", layout="wid
 # --- CLASSE PARA GERAÇÃO DO PDF (LAYOUT FIEL AO MODELO ENVIADO) ---
 class EspelhoDANFE(FPDF):
     def header(self):
-        # Cabeçalho principal conforme o padrão DANFE
-        self.set_font('Arial', 'B', 14)
-        self.cell(130, 15, 'Espelho de Nota Fiscal (IMPORTAÇÃO)', 1, 0, 'C')
+        # Cabeçalho principal conforme o PDF enviado [cite: 3, 9]
+        self.set_font('Arial', 'B', 12)
+        self.cell(110, 10, 'Espelho de Nota Fiscal', 1, 0, 'C')
+        self.set_font('Arial', '', 7)
+        self.cell(40, 10, 'Numero\n000524', 1, 0, 'C')
+        self.cell(40, 10, 'Entrada [X]\nSaida [ ]', 1, 1, 'C')
         
-        self.set_font('Arial', '', 8)
-        # Quadro Identificação da Nota
-        curr_y = self.get_y()
-        curr_x = self.get_x()
-        self.rect(curr_x, curr_y, 60, 15)
-        self.set_xy(curr_x, curr_y + 2)
-        self.cell(60, 4, 'Número: 000524', 0, 1, 'C')
-        self.cell(130, 4, '', 0, 0) # offset
-        self.cell(60, 4, 'Série: 1', 0, 1, 'C')
-        self.cell(130, 4, '', 0, 0) # offset
-        self.cell(60, 4, 'Entrada [X] Saída [ ]', 0, 1, 'C')
-        
-        self.set_xy(10, curr_y + 15)
-        
-        # Dados do Destinatário/Remetente
+        # Dados do Destinatário/Remetente [cite: 13, 15]
         self.set_font('Arial', 'B', 8)
         self.set_fill_color(240, 240, 240)
-        self.cell(190, 8, 'DESTINATÁRIO / REMETENTE (EXPORTADOR ESTRANGEIRO)', 1, 1, 'L', fill=True)
-        
+        self.cell(190, 6, 'DESTINATÁRIO / REMETENTE', 1, 1, 'L', fill=True)
         self.set_font('Arial', '', 7)
-        # Linha 1 Nome e Emissão
-        self.cell(130, 8, 'Nome/Razão Social: ZHEJIANG SANZHENG LUGGAGE', 1, 0, 'L')
-        self.cell(60, 8, 'Data Emissão: 30/01/2026', 1, 1, 'L')
-        
-        # Linha 2 Endereço e UF
-        self.cell(130, 8, 'Endereço: ROOM 101, BUILDING 2, AREA 10A, JINHUA, ZHEJIANG', 1, 0, 'L')
-        self.cell(60, 8, 'UF: EX', 1, 1, 'L')
+        self.cell(130, 6, 'Nome/Razão Social: ZHEJIANG SANZHENG LUGGAGE', 1, 0, 'L')
+        self.cell(60, 6, 'Dt Emissão: 30/01/2026', 1, 1, 'L')
+        self.cell(130, 6, 'Endereço: ROOM 101, BUILDING 2, AREA 10A', 1, 0, 'L')
+        self.cell(60, 6, 'UF: CNZH', 1, 1, 'L')
         self.ln(2)
 
     def footer(self):
@@ -51,82 +36,62 @@ def gerar_pdf(df_final, params):
     pdf = EspelhoDANFE()
     pdf.add_page()
     
-    # --- QUADRO: CÁLCULO DOS IMPOSTOS ---
+    # --- QUADRO: CÁLCULO DOS IMPOSTOS (LÓGICA DO MODELO ENVIADO) ---
     pdf.set_font('Arial', 'B', 8)
     pdf.set_fill_color(240, 240, 240)
-    pdf.cell(190, 7, 'CÁLCULO DOS IMPOSTOS', 1, 1, 'L', fill=True)
-    
-    # Função auxiliar para formatar padrão brasileiro
-    fmt = lambda x: f"{x:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-
-    # Estilo de célula para títulos menores dentro dos quadros
-    def cell_label(w, h, txt, val, border=1, ln=0):
-        curr_x = pdf.get_x()
-        curr_y = pdf.get_y()
-        pdf.rect(curr_x, curr_y, w, h)
-        pdf.set_font('Arial', '', 6)
-        pdf.cell(w, h/2, txt, 0, 1, 'L')
-        pdf.set_x(curr_x)
-        pdf.set_font('Arial', 'B', 7)
-        pdf.cell(w, h/2, val, 0, 0, 'R')
-        pdf.set_xy(curr_x + w, curr_y)
-        if ln == 1: pdf.ln(h)
-
-    # Linha 1 de impostos
-    cell_label(38, 10, "BASE DE CÁLC. ICMS", fmt(params['base_icms_tot']))
-    cell_label(38, 10, "VALOR DO ICMS", fmt(params['base_icms_tot'] * 0.18 - params['icms_diferido_tot']))
-    cell_label(38, 10, "BASE CÁLC. ICMS ST", "0,00")
-    cell_label(38, 10, "VALOR DO ICMS ST", "0,00")
-    cell_label(38, 10, "V. TOTAL PRODUTOS", fmt(params['v_prod_danfe']), ln=1)
-    
-    # Linha 2 de impostos
-    cell_label(38, 10, "VALOR DO FRETE", fmt(params['frete']))
-    cell_label(38, 10, "VALOR DO SEGURO", fmt(params['seguro']))
-    cell_label(38, 10, "DESCONTO", "0,00")
-    cell_label(38, 10, "OUTRAS DESP. ACESS.", fmt(params['desp_assessorias']))
-    cell_label(38, 10, "VALOR DO IPI", fmt(params['v_ipi_tot']), ln=1)
-
-    # Valor Total da Nota em destaque
-    pdf.set_fill_color(240, 240, 240)
-    pdf.set_font('Arial', 'B', 8)
-    pdf.cell(152, 10, "VALOR TOTAL DA NOTA", 1, 0, 'R', fill=True)
-    pdf.cell(38, 10, f"R$ {fmt(params['v_total_nota'])}", 1, 1, 'R', fill=True)
-    
-    # Informações Complementares
-    pdf.ln(2)
-    pdf.set_font('Arial', 'B', 7)
-    pdf.set_fill_color(240, 240, 240)
-    pdf.cell(190, 5, "DADOS ADICIONAIS / INFORMAÇÕES COMPLEMENTARES", 1, 1, 'L', fill=True)
+    pdf.cell(190, 6, 'CÁLCULO DOS IMPOSTOS', 1, 1, 'L', fill=True)
     pdf.set_font('Arial', '', 6)
     
-    obs = (f"D.I.: 2601704700 | Data: 28/01/2026 | CIF: {fmt(params['cif'])} | "
-           f"PIS: {fmt(params['pis_tot'])} | COFINS: {fmt(params['cofins_tot'])} | "
-           f"Taxa Siscomex: {fmt(params['taxa_sis'])} | AFRMM: {fmt(params['afrmm'])}\n"
-           f"ICMS DIFERIDO NO VALOR DE R$ {fmt(params['icms_diferido_tot'])} CONFORME REGULAMENTO.")
+    # Função auxiliar para formatar padrão brasileiro (vírgula para decimal)
+    fmt = lambda x: f"{x:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+
+    # Linha 1: Base ICMS (0,00), Vlr ICMS (0,00), VI Tot Produtos [cite: 26, 41, 53]
+    pdf.cell(38, 10, f"Base de calculo ICMS\n{fmt(0.00)}", 1, 0, 'C')
+    pdf.cell(38, 10, f"Valor ICMS\n{fmt(0.00)}", 1, 0, 'C')
+    pdf.cell(38, 10, f"BCalc ICMS Subst\n{fmt(0.00)}", 1, 0, 'C')
+    pdf.cell(38, 10, f"VL ICMS Subst\n{fmt(0.00)}", 1, 0, 'C')
+    pdf.cell(38, 10, f"VI Tot Produtos\n{fmt(params['v_prod_danfe'])}", 1, 1, 'C')
+    
+    # Linha 2: Frete, Seguro, Despesas, IPI, Total Nota [cite: 50, 51, 52, 54]
+    pdf.cell(38, 10, f"Valor Frete\n{fmt(params['frete'])}", 1, 0, 'C')
+    pdf.cell(38, 10, f"Valor Seguro\n{fmt(params['seguro'])}", 1, 0, 'C')
+    pdf.cell(38, 10, f"Desp Assessorias\n{fmt(params['desp_assessorias'])}", 1, 0, 'C')
+    pdf.cell(38, 10, f"VI IPI\n{fmt(params['v_ipi_tot'])}", 1, 0, 'C')
+    pdf.set_font('Arial', 'B', 6)
+    pdf.cell(38, 10, f"VI Total Nota\n{fmt(params['v_total_nota'])}", 1, 1, 'C')
+    
+    # Informações Complementares [cite: 62, 63]
+    pdf.ln(2)
+    pdf.set_font('Arial', 'B', 7)
+    pdf.cell(190, 5, "DADOS ADICIONAIS / INFORMAÇÕES COMPLEMENTARES", 1, 1, 'L', fill=True)
+    pdf.set_font('Arial', '', 6)
+    obs = (f"Nr. DI: 2601704700 | Data DI: 28/01/2026 | CIF: {fmt(params['cif'])} | "
+           f"PIS: {fmt(params['pis_tot'])} | Cofins: {fmt(params['cofins_tot'])} | "
+           f"Tx Siscomex: {fmt(params['taxa_sis'])} | AFRMM: {fmt(params['afrmm'])}\n"
+           f"ICMS DIFERIDO CONFORME LEGISLAÇÃO NO VALOR DE R$ {fmt(params['icms_diferido_tot'])}.")
     pdf.multi_cell(190, 4, obs, 1)
     pdf.ln(4)
 
-    # --- TABELA DE PRODUTOS ---
+    # --- TABELA DE PRODUTOS [cite: 20, 21] ---
     pdf.set_font('Arial', 'B', 7)
     pdf.set_fill_color(230, 230, 230)
-    # Cabeçalho da Tabela
-    cols_pdf = [('CÓDIGO', 15), ('DESCRIÇÃO DOS PRODUTOS', 70), ('NCM', 18), ('CST', 10), ('CFOP', 10), ('QTD', 12), ('V. UNIT', 18), ('V. TOTAL', 18), ('%IPI', 9)]
+    cols_pdf = ['Cod.', 'Descrição dos Produtos', 'NCM', 'Qtd', 'VI Unitario', 'VI Total', 'ICMS', 'VIPI']
+    widths = [12, 78, 20, 15, 20, 20, 10, 15]
     
-    for col_name, width in cols_pdf:
-        pdf.cell(width, 7, col_name, 1, 0, 'C', 1)
+    for i, col in enumerate(cols_pdf):
+        pdf.cell(widths[i], 7, col, 1, 0, 'C', 1)
     pdf.ln()
 
     pdf.set_font('Arial', '', 6)
     for index, row in df_final.iterrows():
-        pdf.cell(15, 6, "021", 1, 0, 'C')
-        pdf.cell(70, 6, str(row.get('PRODUTO', ''))[:45], 1)
-        pdf.cell(18, 6, str(row.get('NCM', '')), 1, 0, 'C')
-        pdf.cell(10, 6, "000", 1, 0, 'C')
-        pdf.cell(10, 6, "3102", 1, 0, 'C')
-        pdf.cell(12, 6, f"{row.get('QTD', 0):.0f}", 1, 0, 'C')
-        pdf.cell(18, 6, fmt(row.get('VLR_UNITARIO_BRL', 0)), 1, 0, 'R')
-        pdf.cell(18, 6, fmt(row.get('VLR_PROD_TOTAL', 0)), 1, 0, 'R')
-        pdf.cell(9, 6, "0,00", 1, 0, 'C')
+        pdf.cell(widths[0], 6, "021", 1)
+        pdf.cell(widths[1], 6, str(row.get('PRODUTO', ''))[:55], 1)
+        pdf.cell(widths[2], 6, str(row.get('NCM', '')), 1, 0, 'C')
+        pdf.cell(widths[3], 6, f"{row.get('QTD', 0):.0f}", 1, 0, 'C')
+        pdf.cell(widths[4], 6, fmt(row.get('VLR_UNITARIO_BRL', 0)), 1, 0, 'R')
+        pdf.cell(widths[5], 6, fmt(row.get('VLR_PROD_TOTAL', 0)), 1, 0, 'R')
+        pdf.cell(widths[6], 6, "18,00", 1, 0, 'C')
+        pdf.cell(widths[7], 6, fmt(row.get('VLR_IPI', 0)), 1, 0, 'R')
         pdf.ln()
         
     return bytes(pdf.output())
@@ -211,7 +176,7 @@ if arquivo_subido:
             cols_reais = [c for c in col_exibicao if c in df.columns]
             st.dataframe(df[cols_reais].style.format(precision=2), use_container_width=True)
 
-            # PARÂMETROS PARA O PDF SEGUINDO O MODELO
+            # PARÂMETROS PARA O PDF SEGUINDO O MODELO [cite: 53, 54, 63]
             v_prod_danfe = df['VLR_ADUANEIRO'].sum() + df['VLR_II'].sum()
             v_desp_assessorias = df['VLR_PIS'].sum() + df['VLR_COFINS'].sum() + v_taxas
             
