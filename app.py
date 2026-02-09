@@ -3,7 +3,7 @@ import pandas as pd
 import io
 from fpdf import FPDF
 
-# Configuração Básica - Projeto Sentinela
+# Configuração Básica - Design Nativo e Amplo
 st.set_page_config(page_title="ARCANUM - Auditoria de Importação", layout="wide")
 
 # --- CLASSE PARA GERAÇÃO DO PDF (REPLICA DO LAYOUT DANFE 607) ---
@@ -12,7 +12,7 @@ class EspelhoDANFE(FPDF):
         # Quadro de Identificação do Emitente (Em branco)
         self.rect(10, 10, 95, 25) 
         
-        # Quadro DANFE / Número / Série [cite: 85, 88, 93]
+        # Quadro DANFE / Número / Série (Ajustado para 0 conforme pedido)
         self.rect(105, 10, 35, 25)
         self.set_font('Arial', 'B', 10)
         self.set_xy(105, 12)
@@ -24,17 +24,17 @@ class EspelhoDANFE(FPDF):
         self.cell(35, 3, 'Nota Fiscal Eletrônica', 0, 1, 'C')
         self.set_font('Arial', 'B', 8)
         self.set_xy(105, 24)
-        self.cell(35, 4, 'Nº 000.000.607', 0, 1, 'C')
+        self.cell(35, 4, 'Nº 000.000.000', 0, 1, 'C') # Número zero
         self.set_x(105)
-        self.cell(35, 4, 'Série 1', 0, 1, 'C')
+        self.cell(35, 4, 'Série 0', 0, 1, 'C') # Série zero
 
-        # Quadro Chave de Acesso [cite: 100]
+        # Quadro Chave de Acesso
         self.rect(140, 10, 60, 25)
         self.set_font('Arial', '', 6)
         self.set_xy(140, 11)
         self.cell(60, 4, 'CHAVE DE ACESSO', 0, 1, 'L')
 
-        # Natureza da Operação [cite: 94]
+        # Natureza da Operação
         self.rect(10, 35, 190, 8)
         self.set_xy(10, 35)
         self.set_font('Arial', '', 6)
@@ -43,7 +43,7 @@ class EspelhoDANFE(FPDF):
         self.set_x(10)
         self.cell(190, 4, 'COMPRA PARA COMERCIALIZACAO', 0, 1, 'L')
 
-        # Dados do Destinatário/Remetente [cite: 107]
+        # Dados do Destinatário/Remetente (Em branco)
         self.ln(2)
         self.set_font('Arial', 'B', 8)
         self.cell(190, 5, 'DESTINATÁRIO / REMETENTE', 1, 1, 'L')
@@ -54,13 +54,13 @@ def gerar_pdf(df_final, params):
     pdf = EspelhoDANFE()
     pdf.add_page()
     
-    # --- QUADRO: CÁLCULO DO IMPOSTO [cite: 121] ---
+    # --- QUADRO: CÁLCULO DO IMPOSTO ---
     pdf.set_font('Arial', 'B', 7)
     pdf.cell(190, 5, 'CÁLCULO DO IMPOSTO', 1, 1, 'L')
     
     fmt = lambda x: f"{x:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
-    # Linha 1 [cite: 122, 123, 145]
+    # Linha 1
     pdf.set_font('Arial', '', 6)
     pdf.cell(38, 4, 'BASE DE CÁLC DO ICMS', 'LR', 0, 'L')
     pdf.cell(38, 4, 'VALOR DO ICMS', 'LR', 0, 'L')
@@ -75,7 +75,7 @@ def gerar_pdf(df_final, params):
     pdf.cell(38, 5, fmt(0.00), 'LRB', 0, 'R')
     pdf.cell(38, 5, fmt(params['v_prod_danfe']), 'LRB', 1, 'R')
     
-    # Linha 2 [cite: 128, 129, 132, 139, 149, 152]
+    # Linha 2
     pdf.set_font('Arial', '', 6)
     pdf.cell(31.6, 4, 'VALOR DO FRETE', 'LR', 0, 'L')
     pdf.cell(31.6, 4, 'VALOR DO SEGURO', 'LR', 0, 'L')
@@ -93,7 +93,7 @@ def gerar_pdf(df_final, params):
     pdf.cell(32, 5, fmt(params['v_total_nota']), 'LRB', 1, 'R')
     pdf.ln(5)
 
-    # --- QUADRO: DADOS DO PRODUTO [cite: 167] ---
+    # --- QUADRO: DADOS DO PRODUTO ---
     pdf.set_font('Arial', 'B', 7)
     pdf.cell(190, 5, 'DADOS DOS PRODUTOS / SERVIÇOS', 1, 1, 'L')
     cols = ['CÓDIGO', 'DESCRIÇÃO DO PRODUTO', 'NCM/SH', 'CST', 'CFOP', 'UN', 'QTD', 'V. UNIT', 'V. TOTAL']
@@ -115,13 +115,13 @@ def gerar_pdf(df_final, params):
         pdf.cell(w[8], 5, fmt(row.get('VLR_PROD_TOTAL', 0)), 1, 0, 'R')
         pdf.ln()
 
-    # --- DADOS ADICIONAIS [cite: 174] ---
+    # --- DADOS ADICIONAIS ---
     pdf.ln(5)
     pdf.set_font('Arial', 'B', 7)
     pdf.cell(190, 5, 'DADOS ADICIONAIS', 1, 1, 'L')
     pdf.set_font('Arial', '', 6)
-    obs = (f"Informacoes Complementares: Nr. DI: 2601704700 | CIF: {fmt(params['cif'])} | Tx Siscomex: {fmt(params['taxa_sis'])} | "
-           f"AFRMM: {fmt(params['afrmm'])} | ICMS DIFERIDO NO VALOR DE R$ {fmt(params['v_icms_diferido'])}.")
+    obs = (f"Informacoes Complementares: CIF: {fmt(params['cif'])} | Tx Siscomex: {fmt(params['taxa_sis'])} | "
+           f"AFRMM: {fmt(params['afrmm'])} | ICMS DIFERIDO CONFORME REGULAMENTO.")
     pdf.multi_cell(190, 4, obs, 1)
     
     return bytes(pdf.output())
@@ -146,7 +146,7 @@ with col_fiscal:
 
 st.divider()
 
-# --- SEÇÃO 2: MODELO E UPLOAD (RESTAURADA) ---
+# --- SEÇÃO 2: MODELO E UPLOAD ---
 st.subheader("📋 2. Itens da Importação")
 col_mod, col_up = st.columns([1, 2])
 
@@ -182,8 +182,9 @@ if arquivo_subido:
     p_pis = 2.10 if regime == "Lucro Real" else 0.65
     p_cof = 9.65 if regime == "Lucro Real" else 3.00
     
-    v_ii_tot = df.get('VLR_II', total_prods_brl * 0.14).sum()
-    v_ipi_tot = df.get('VLR_IPI', (total_prods_brl + v_ii_tot) * 0.05).sum()
+    v_ii_tot = df.get('ALIQ_II', 14.0).sum() if 'ALIQ_II' in df.columns else total_prods_brl * 0.14
+    v_ipi_tot = df.get('ALIQ_IPI', 6.5).sum() if 'ALIQ_IPI' in df.columns else (total_prods_brl + v_ii_tot) * 0.065
+    
     pis_tot = total_prods_brl * (p_pis/100)
     cof_tot = total_prods_brl * (p_cof/100)
     
@@ -207,4 +208,4 @@ if arquivo_subido:
 
     st.success("✅ Cálculos processados!")
     pdf_bytes = gerar_pdf(df, params_pdf)
-    st.download_button("📥 Baixar DANFE (Modelo 607)", pdf_bytes, "danfe_arcanum.pdf", "application/pdf")
+    st.download_button("📥 Baixar DANFE (Modelo Série 0)", pdf_bytes, "danfe_arcanum.pdf", "application/pdf")
