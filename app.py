@@ -9,20 +9,25 @@ st.set_page_config(page_title="ARCANUM - Auditoria de Importação", layout="wid
 # --- CLASSE PARA GERAÇÃO DO PDF (LAYOUT FIEL AO MODELO ENVIADO) ---
 class EspelhoDANFE(FPDF):
     def header(self):
-        # Cabeçalho principal conforme o PDF enviado [cite: 3, 9]
+        # Cabeçalho principal conforme o PDF enviado [cite: 1, 3, 9]
         self.set_font('Arial', 'B', 12)
         self.cell(110, 10, 'Espelho de Nota Fiscal', 1, 0, 'C')
         self.set_font('Arial', '', 7)
+        # Quadro de Número e Tipo [cite: 9, 8, 5]
+        curr_y = self.get_y()
+        curr_x = self.get_x()
         self.cell(40, 10, 'Numero\n000524', 1, 0, 'C')
         self.cell(40, 10, 'Entrada [X]\nSaida [ ]', 1, 1, 'C')
         
-        # Dados do Destinatário/Remetente [cite: 13, 15]
+        # Dados do Destinatário/Remetente [cite: 13, 15, 16]
         self.set_font('Arial', 'B', 8)
         self.set_fill_color(240, 240, 240)
         self.cell(190, 6, 'DESTINATÁRIO / REMETENTE', 1, 1, 'L', fill=True)
         self.set_font('Arial', '', 7)
+        # Linha 1 [cite: 15, 38]
         self.cell(130, 6, 'Nome/Razão Social: ZHEJIANG SANZHENG LUGGAGE', 1, 0, 'L')
         self.cell(60, 6, 'Dt Emissão: 30/01/2026', 1, 1, 'L')
+        # Linha 2 [cite: 17, 30]
         self.cell(130, 6, 'Endereço: ROOM 101, BUILDING 2, AREA 10A', 1, 0, 'L')
         self.cell(60, 6, 'UF: CNZH', 1, 1, 'L')
         self.ln(2)
@@ -36,23 +41,23 @@ def gerar_pdf(df_final, params):
     pdf = EspelhoDANFE()
     pdf.add_page()
     
-    # --- QUADRO: CÁLCULO DOS IMPOSTOS (LÓGICA DO MODELO ENVIADO) ---
+    # --- QUADRO: CALCULO DOS IMPOSTOS (LÓGICA DO MODELO ENVIADO) ---
     pdf.set_font('Arial', 'B', 8)
     pdf.set_fill_color(240, 240, 240)
-    pdf.cell(190, 6, 'CÁLCULO DOS IMPOSTOS', 1, 1, 'L', fill=True)
+    pdf.cell(190, 6, 'CALCULO DOS IMPOSTOS', 1, 1, 'L', fill=True) # [cite: 24]
     pdf.set_font('Arial', '', 6)
     
-    # Função auxiliar para formatar padrão brasileiro (vírgula para decimal)
+    # Função auxiliar para formatar padrão brasileiro (1.234,56)
     fmt = lambda x: f"{x:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
-    # Linha 1: Base ICMS (0,00), Vlr ICMS (0,00), VI Tot Produtos [cite: 26, 41, 53]
+    # Linha 1: Base ICMS (0,00), Vlr ICMS (0,00), VI Tot Produtos [cite: 25, 41, 42, 43, 44]
     pdf.cell(38, 10, f"Base de calculo ICMS\n{fmt(0.00)}", 1, 0, 'C')
     pdf.cell(38, 10, f"Valor ICMS\n{fmt(0.00)}", 1, 0, 'C')
     pdf.cell(38, 10, f"BCalc ICMS Subst\n{fmt(0.00)}", 1, 0, 'C')
     pdf.cell(38, 10, f"VL ICMS Subst\n{fmt(0.00)}", 1, 0, 'C')
     pdf.cell(38, 10, f"VI Tot Produtos\n{fmt(params['v_prod_danfe'])}", 1, 1, 'C')
     
-    # Linha 2: Frete, Seguro, Despesas, IPI, Total Nota [cite: 50, 51, 52, 54]
+    # Linha 2: Frete, Seguro, Despesas, IPI, Total Nota [cite: 27, 46, 47, 48, 49]
     pdf.cell(38, 10, f"Valor Frete\n{fmt(params['frete'])}", 1, 0, 'C')
     pdf.cell(38, 10, f"Valor Seguro\n{fmt(params['seguro'])}", 1, 0, 'C')
     pdf.cell(38, 10, f"Desp Assessorias\n{fmt(params['desp_assessorias'])}", 1, 0, 'C')
@@ -176,7 +181,7 @@ if arquivo_subido:
             cols_reais = [c for c in col_exibicao if c in df.columns]
             st.dataframe(df[cols_reais].style.format(precision=2), use_container_width=True)
 
-            # PARÂMETROS PARA O PDF SEGUINDO O MODELO [cite: 53, 54, 63]
+            # PARÂMETROS PARA O PDF SEGUINDO O MODELO
             v_prod_danfe = df['VLR_ADUANEIRO'].sum() + df['VLR_II'].sum()
             v_desp_assessorias = df['VLR_PIS'].sum() + df['VLR_COFINS'].sum() + v_taxas
             
@@ -202,5 +207,6 @@ if arquivo_subido:
                 with pd.ExcelWriter(buffer_xlsx, engine='openpyxl') as writer: df.to_excel(writer, index=False)
                 st.download_button("📥 Baixar Espelho em Excel", buffer_xlsx.getvalue(), "espelho_arcanum_conferencia.xlsx")
             with col_exp2:
+                # O PDF é retornado como bytes puros agora
                 pdf_bytes_data = gerar_pdf(df, params_pdf)
                 st.download_button("📥 Baixar PDF (Modelo Espelho)", pdf_bytes_data, "espelho_arcanum_danfe.pdf", "application/pdf")
