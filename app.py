@@ -54,7 +54,7 @@ def gerar_pdf(df_final, params):
     pdf = EspelhoDANFE()
     pdf.add_page()
     
-    # --- QUADRO: CÁLCULO DO IMPOSTO (CONFORME 607.pdf) ---
+    # --- QUADRO: CÁLCULO DO IMPOSTO ---
     pdf.set_font('Arial', 'B', 7)
     pdf.cell(190, 5, 'CÁLCULO DO IMPOSTO', 1, 1, 'L')
     
@@ -126,22 +126,24 @@ def gerar_pdf(df_final, params):
     
     return bytes(pdf.output())
 
-# --- INTERFACE STREAMLIT (INPUTS DINÂMICOS RESTAURADOS) ---
+# --- INTERFACE STREAMLIT (CAMPOS ZERADOS PARA VOCÊ PREENCHER) ---
 st.title("📜 ARCANUM")
 st.divider()
 
 col_cambio, col_log, col_fiscal = st.columns(3)
 with col_cambio:
-    taxa_cambio = st.number_input("Taxa de Câmbio", min_value=0.0001, value=5.2000, format="%.4f")
+    taxa_cambio = st.number_input("Taxa de Câmbio", min_value=0.0, value=0.0, format="%.4f") # Começa zerado
+
 with col_log:
-    v_frete = st.number_input("Frete Internacional", min_value=0.0, step=0.01)
-    v_seguro = st.number_input("Seguro Internacional", min_value=0.0, step=0.01)
-    v_taxas = st.number_input("Taxas Siscomex", min_value=0.0, step=0.01)
-    v_afrmm = st.number_input("AFRMM Total", min_value=0.0, step=0.01)
+    v_frete = st.number_input("Frete Internacional", min_value=0.0, value=0.0, step=0.01) # Começa zerado
+    v_seguro = st.number_input("Seguro Internacional", min_value=0.0, value=0.0, step=0.01) # Começa zerado
+    v_taxas = st.number_input("Taxas Siscomex", min_value=0.0, value=0.0, step=0.01) # Começa zerado
+    v_afrmm = st.number_input("AFRMM Total", min_value=0.0, value=0.0, step=0.01) # Começa zerado
+
 with col_fiscal:
     regime = st.selectbox("Regime PIS/COFINS", ["Lucro Real", "Lucro Presumido"])
     aliq_icms = st.number_input("Alíquota ICMS (%)", value=18.0)
-    tem_dif = st.radio("Diferimento?", ("Sim", "Não"), horizontal=True)
+    tem_dif = st.radio("Diferimento?", ("Sim", "Não"), horizontal=True) # Você indica se é diferido ou não
     perc_dif = st.number_input("Percentual Diferido (%)", value=100.0) if tem_dif == "Sim" else 0.0
 
 st.divider()
@@ -152,8 +154,8 @@ col_mod, col_up = st.columns([1, 2])
 
 with col_mod:
     df_modelo = pd.DataFrame({
-        'PRODUTO': ['EXEMPLO ITEM 01'], 'NCM': ['4202.12.10'], 'QTD': [10], 
-        'VLR_UNITARIO_MOEDA': [100.00], 'ALIQ_II': [14.0], 'ALIQ_IPI': [6.5]
+        'PRODUTO': ['ITEM EXEMPLO'], 'NCM': ['0000.00.00'], 'QTD': [0], 
+        'VLR_UNITARIO_MOEDA': [0.00], 'ALIQ_II': [0.0], 'ALIQ_IPI': [0.0]
     })
     buffer_mod = io.BytesIO()
     with pd.ExcelWriter(buffer_mod, engine='openpyxl') as writer:
@@ -175,39 +177,42 @@ if arquivo_subido:
         st.error("❌ Coluna de Valor ou Qtd não encontrada.")
         st.stop()
 
-    # CÁLCULOS BASEADOS NOS SEUS INPUTS DA TELA
+    # CÁLCULOS COM BASE NO QUE VOCÊ PREENCHEU NA TELA
     df['VLR_UNITARIO_BRL'] = df[col_vlr] * taxa_cambio
     df['VLR_PROD_TOTAL'] = df[col_qtd] * df['VLR_UNITARIO_BRL']
     total_prods_brl = df['VLR_PROD_TOTAL'].sum()
     
-    p_pis = 2.10 if regime == "Lucro Real" else 0.65
-    p_cof = 9.65 if regime == "Lucro Real" else 3.00
-    
-    v_ii_tot = df['VLR_PROD_TOTAL'].sum() * 0.14 # Base II simplificada
-    v_ipi_tot = (df['VLR_PROD_TOTAL'].sum() + v_ii_tot) * 0.065 # Base IPI simplificada
-    
-    pis_tot = total_prods_brl * (p_pis/100)
-    cof_tot = total_prods_brl * (p_cof/100)
-    
-    # Base ICMS (DINÂMICA COM SEUS INPUTS)
-    base_icms = (total_prods_brl + v_frete + v_seguro + v_taxas + v_afrmm + v_ii_tot + v_ipi_tot + pis_tot + cof_tot) / (1 - (aliq_icms/100))
-    icms_cheio = base_icms * (aliq_icms/100)
-    v_icms_diferido = icms_cheio * (perc_dif/100)
-    v_icms_recolher = icms_cheio - v_icms_diferido
+    if taxa_cambio > 0:
+        p_pis = 2.10 if regime == "Lucro Real" else 0.65
+        p_cof = 9.65 if regime == "Lucro Real" else 3.00
+        
+        v_ii_tot = df.get('VLR_II', total_prods_brl * 0.14).sum()
+        v_ipi_tot = df.get('VLR_IPI', (total_prods_brl + v_ii_tot) * 0.05).sum()
+        
+        pis_tot = total_prods_brl * (p_pis/100)
+        cof_tot = total_prods_brl * (p_cof/100)
+        
+        # Base ICMS Dinâmica
+        base_icms = (total_prods_brl + v_frete + v_seguro + v_taxas + v_afrmm + v_ii_tot + v_ipi_tot + pis_tot + cof_tot) / (1 - (aliq_icms/100))
+        icms_cheio = base_icms * (aliq_icms/100)
+        v_icms_diferido = icms_cheio * (perc_dif/100)
+        v_icms_recolher = icms_cheio - v_icms_diferido
 
-    params_pdf = {
-        'v_prod_danfe': total_prods_brl + v_ii_tot,
-        'frete': v_frete, 'seguro': v_seguro,
-        'pis_tot': pis_tot, 'cofins_tot': cof_tot,
-        'v_ipi_tot': v_ipi_tot,
-        'base_icms_tot': base_icms,
-        'v_icms_recolher': v_icms_recolher,
-        'v_icms_diferido': v_icms_diferido,
-        'v_total_nota': total_prods_brl + v_ii_tot + v_ipi_tot + pis_tot + cof_tot + v_frete + v_seguro + v_taxas + v_afrmm + v_icms_recolher,
-        'cif': total_prods_brl + v_frete + v_seguro,
-        'taxa_sis': v_taxas, 'afrmm': v_afrmm
-    }
+        params_pdf = {
+            'v_prod_danfe': total_prods_brl + v_ii_tot,
+            'frete': v_frete, 'seguro': v_seguro,
+            'pis_tot': pis_tot, 'cofins_tot': cof_tot,
+            'v_ipi_tot': v_ipi_tot,
+            'base_icms_tot': base_icms,
+            'v_icms_recolher': v_icms_recolher,
+            'v_icms_diferido': v_icms_diferido,
+            'v_total_nota': total_prods_brl + v_ii_tot + v_ipi_tot + pis_tot + cof_tot + v_frete + v_seguro + v_taxas + v_afrmm + v_icms_recolher,
+            'cif': total_prods_brl + v_frete + v_seguro,
+            'taxa_sis': v_taxas, 'afrmm': v_afrmm
+        }
 
-    st.success("✅ Cálculos processados com seus dados!")
-    pdf_bytes = gerar_pdf(df, params_pdf)
-    st.download_button("📥 Baixar DANFE (Série 0 / Nota 0)", pdf_bytes, "danfe_arcanum.pdf", "application/pdf")
+        st.success("✅ Cálculos realizados!")
+        pdf_bytes = gerar_pdf(df, params_pdf)
+        st.download_button("📥 Baixar DANFE (Série 0 / Nota 0)", pdf_bytes, "danfe_arcanum.pdf", "application/pdf")
+    else:
+        st.warning("⚠️ Insira a Taxa de Câmbio para iniciar os cálculos.")
