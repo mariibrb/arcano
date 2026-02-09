@@ -6,45 +6,68 @@ from fpdf import FPDF
 # Configuração Básica - Design Nativo e Amplo
 st.set_page_config(page_title="ARCANUM - Auditoria de Importação", layout="wide")
 
-# --- CLASSE PARA GERAÇÃO DO PDF (ESTILO ESPELHO DANFE) ---
+# --- CLASSE PARA GERAÇÃO DO PDF (LAYOUT FIEL AO MODELO ENVIADO) ---
 class EspelhoDANFE(FPDF):
     def header(self):
-        self.set_font('Arial', 'B', 12)
-        self.cell(0, 10, 'ARCANUM - ESPELHO DE NOTA FISCAL DE IMPORTAÇÃO', 1, 1, 'C')
-        self.ln(5)
+        # Cabeçalho principal
+        self.set_font('Arial', 'B', 14)
+        self.cell(130, 15, 'Espelho de Nota Fiscal', 1, 0, 'C')
+        self.set_font('Arial', '', 8)
+        self.cell(60, 15, 'Entrada [X] Saída [ ]', 1, 1, 'C')
+        
+        # Dados do Destinatário (Baseado no seu modelo)
+        self.set_font('Arial', 'B', 8)
+        self.set_fill_color(240, 240, 240)
+        self.cell(190, 8, 'DESTINATÁRIO / REMETENTE', 1, 1, 'L', fill=True)
+        self.set_font('Arial', '', 8)
+        self.cell(190, 8, 'Nome/Razão Social: ZHEJIANG SANZHENG LUGGAGE', 1, 1, 'L')
+        self.ln(2)
 
     def footer(self):
         self.set_y(-15)
         self.set_font('Arial', 'I', 8)
         self.cell(0, 10, f'Página {self.page_no()}', 0, 0, 'C')
 
-def gerar_pdf(df_final):
+def gerar_pdf(df_final, params):
     pdf = EspelhoDANFE()
-    pdf.add_page(orientation='L') # Paisagem para caber todas as colunas
+    pdf.add_page()
+    
+    # --- DADOS DA DI (DADOS ADICIONAIS) ---
     pdf.set_font('Arial', 'B', 8)
+    pdf.set_fill_color(240, 240, 240)
+    pdf.cell(190, 8, 'DADOS ADICIONAIS / IMPOSTOS GLOBAIS', 1, 1, 'L', fill=True)
+    pdf.set_font('Arial', '', 8)
+    pdf.cell(63, 8, f"Nr. DI: {params['di_num']}", 1, 0)
+    pdf.cell(63, 8, f"Data DI: {params['di_data']}", 1, 0)
+    pdf.cell(64, 8, f"AFRMM: {params['afrmm']:.2f}", 1, 1)
     
-    # Definição de Colunas e Larguras
-    colunas = ['DI', 'ADICAO', 'ITEM', 'PRODUTO', 'VLR_ADUAN', 'VLR_II', 'VLR_IPI', 'BASE_ICMS', 'ICMS_REC']
-    larguras = [25, 15, 10, 60, 30, 25, 25, 30, 30]
-    
-    # Cabeçalho da Tabela
+    pdf.cell(63, 8, f"PIS: {params['pis_tot']:.2f}", 1, 0)
+    pdf.cell(63, 8, f"Cofins: {params['cofins_tot']:.2f}", 1, 0)
+    pdf.cell(64, 8, f"Taxa Siscomex: {params['taxa_sis']:.2f}", 1, 1)
+    pdf.ln(5)
+
+    # --- TABELA DE PRODUTOS ---
+    pdf.set_font('Arial', 'B', 7)
     pdf.set_fill_color(230, 230, 230)
-    for i, col in enumerate(colunas):
-        pdf.cell(larguras[i], 7, col, 1, 0, 'C', 1)
+    # Colunas conforme o seu PDF: Cod, Descrição, NCM, Qtd, Vl Unit, Vl Tot, ICMS, IPI
+    cols = ['Cod', 'Descricao', 'NCM', 'Qtd', 'Vl Unit', 'Vl Tot', 'ICMS%', 'IPI%', 'ICMS Rec']
+    widths = [10, 55, 20, 15, 20, 20, 15, 15, 20]
+    
+    for i, col in enumerate(cols):
+        pdf.cell(widths[i], 7, col, 1, 0, 'C', 1)
     pdf.ln()
 
-    # Dados
-    pdf.set_font('Arial', '', 7)
+    pdf.set_font('Arial', '', 6)
     for index, row in df_final.iterrows():
-        pdf.cell(larguras[0], 6, str(row['DI']), 1)
-        pdf.cell(larguras[1], 6, str(row['ADICAO']), 1, 0, 'C')
-        pdf.cell(larguras[2], 6, str(row['ITEM']), 1, 0, 'C')
-        pdf.cell(larguras[3], 6, str(row['PRODUTO'])[:35], 1)
-        pdf.cell(larguras[4], 6, f"{row['VLR_ADUANEIRO']:.2f}", 1, 0, 'R')
-        pdf.cell(larguras[5], 6, f"{row['VLR_II']:.2f}", 1, 0, 'R')
-        pdf.cell(larguras[6], 6, f"{row['VLR_IPI']:.2f}", 1, 0, 'R')
-        pdf.cell(larguras[7], 6, f"{row['BASE_ICMS']:.2f}", 1, 0, 'R')
-        pdf.cell(larguras[8], 6, f"{row['ICMS_RECOLHER']:.2f}", 1, 0, 'R')
+        pdf.cell(widths[0], 6, str(row.get('ITEM', index+1)), 1, 0, 'C')
+        pdf.cell(widths[1], 6, str(row.get('PRODUTO', ''))[:40], 1)
+        pdf.cell(widths[2], 6, str(row.get('NCM', '')), 1, 0, 'C')
+        pdf.cell(widths[3], 6, str(row.get('QTD', 0)), 1, 0, 'C')
+        pdf.cell(widths[4], 6, f"{row.get('VLR_UNITARIO_BRL', 0):.2f}", 1, 0, 'R')
+        pdf.cell(widths[5], 6, f"{row.get('VLR_PROD_TOTAL', 0):.2f}", 1, 0, 'R')
+        pdf.cell(widths[6], 6, f"{params['aliq_icms']:.2f}", 1, 0, 'C')
+        pdf.cell(widths[7], 6, f"{row.get('ALIQ_IPI', 0):.2f}", 1, 0, 'C')
+        pdf.cell(widths[8], 6, f"{row.get('ICMS_RECOLHER', 0):.2f}", 1, 0, 'R')
         pdf.ln()
         
     return pdf.output()
@@ -61,6 +84,8 @@ with col_cambio:
     st.subheader("🌐 Câmbio e Moeda")
     moeda_ref = st.selectbox("Moeda Estrangeira", ["USD", "EUR", "GBP", "CNY", "OUTRA"])
     taxa_cambio = st.number_input(f"Taxa de Câmbio ({moeda_ref} para BRL)", min_value=0.0001, value=5.0000, format="%.4f", step=0.0001)
+    di_num = st.text_input("Número da DI", "2601704700")
+    di_data = st.text_input("Data da DI", "28/01/2026")
 
 with col_log:
     st.subheader("🚛 Logística e Taxas (R$)")
@@ -91,8 +116,8 @@ col_mod, col_up = st.columns([1, 2])
 
 with col_mod:
     df_modelo = pd.DataFrame({
-        'DI': ['26/0000001-0'], 'ADICAO': ['001'], 'ITEM': [1], 'NCM': ['8517.62.77'],
-        'PRODUTO': ['Exemplo de Item'], 'QTD': [10], 'VLR_UNITARIO_MOEDA': [300.00], 'ALIQ_II': [14.0], 'ALIQ_IPI': [5.0]
+        'DI': ['26/0000001-0'], 'ADICAO': ['001'], 'ITEM': [1], 'NCM': ['42021210'],
+        'PRODUTO': ['MALAS DE BORDO REVESTIDAS'], 'QTD': [495], 'VLR_UNITARIO_MOEDA': [257.83], 'ALIQ_II': [14.0], 'ALIQ_IPI': [6.5]
     })
     buffer_mod = io.BytesIO()
     with pd.ExcelWriter(buffer_mod, engine='openpyxl') as writer:
@@ -141,14 +166,20 @@ if arquivo_subido:
             cols_exibicao = ['DI', 'ADICAO', 'ITEM', 'NCM', 'PRODUTO', 'VLR_ADUANEIRO', 'VLR_II', 'RAT_AFRMM', 'BASE_ICMS', 'ICMS_RECOLHER']
             st.dataframe(df[cols_exibicao].style.format(precision=2), use_container_width=True)
 
-            # Exportação
+            # Parâmetros para o PDF
+            params_pdf = {
+                'di_num': di_num, 'di_data': di_data, 'afrmm': v_afrmm,
+                'pis_tot': df['VLR_PIS'].sum(), 'cofins_tot': df['VLR_COFINS'].sum(),
+                'taxa_sis': v_taxas, 'aliq_icms': aliq_icms
+            }
+
             col_exp1, col_exp2 = st.columns(2)
             with col_exp1:
                 buffer_xlsx = io.BytesIO()
                 with pd.ExcelWriter(buffer_xlsx, engine='openpyxl') as writer: df.to_excel(writer, index=False)
                 st.download_button("📥 Baixar Espelho em Excel", buffer_xlsx.getvalue(), "espelho_arcanum.xlsx")
             with col_exp2:
-                pdf_output = gerar_pdf(df)
+                pdf_output = gerar_pdf(df, params_pdf)
                 st.download_button("📥 Baixar PDF (Estilo DANFE)", pdf_output, "espelho_danfe_arcanum.pdf", "application/pdf")
         else:
             st.error("Erro: O Valor Bruto resultou em zero.")
