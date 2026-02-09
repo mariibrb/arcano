@@ -2,101 +2,127 @@ import streamlit as st
 import pandas as pd
 import io
 
-st.set_page_config(page_title="ARCANUM - Inteligência Fiscal", layout="wide")
+st.set_page_config(page_title="ARCANUM - Auditoria Fiscal", layout="wide")
 
-# Estilização: Fundo Preto, Texto Branco e Ciano Forte (Sem tons pastel)
+# Estilização: Fundo Total Preto, Texto Verde Matrix e Branco
 st.markdown("""
     <style>
-    .main { background-color: #000000; }
-    h1, h2, h3 { color: #ffffff !important; font-weight: 800; }
+    /* Fundo geral e da sidebar */
+    .main, .stSidebar, .stSidebar > div { background-color: #000000 !important; }
+    
+    /* Títulos em Branco Puro */
+    h1, h2, h3 { color: #ffffff !important; font-family: 'Courier New', Courier, monospace; font-weight: 900; }
+    
+    /* Labels e Inputs em Verde Neon (Estilo Terminal) */
     .stNumberInput label, .stRadio label, .stSelectbox label, .stCheckbox label { 
-        color: #00ffff !important; 
-        font-size: 18px !important;
-        font-weight: bold !important;
+        color: #00ff00 !important; 
+        font-size: 16px !important;
+        text-transform: uppercase;
     }
-    .stMarkdown, p { color: #ffffff !important; font-size: 16px; }
-    stDataFrame { border: 2px solid #00ffff; }
+    
+    /* Textos Gerais */
+    .stMarkdown, p, span { color: #ffffff !important; }
+    
+    /* Botões e Inputs */
+    input { background-color: #1a1a1a !important; color: #00ff00 !important; border: 1px solid #00ff00 !important; }
+    div[data-baseweb="select"] > div { background-color: #1a1a1a !important; color: #ffffff !important; }
+    
+    /* Tabela com borda neon */
+    .stDataFrame { border: 1px solid #00ff00; }
     </style>
     """, unsafe_allow_html=True)
 
 st.markdown("# 📜 ARCANUM")
-st.markdown("### *Módulo de Auditoria de Importação*")
+st.markdown("### AUDITORIA DE IMPORTAÇÃO | SENTINELA")
 st.divider()
 
-# --- PAINEL DE CONTROLE (SIDEBAR) ---
+# --- SIDEBAR: PARÂMETROS ---
 with st.sidebar:
-    st.header("⚙️ PARÂMETROS GLOBAIS")
-    v_frete_global = st.number_input("Frete Total (R$)", min_value=0.0, step=0.01, format="%.2f")
-    v_seguro_global = st.number_input("Seguro Total (R$)", min_value=0.0, step=0.01, format="%.2f")
-    v_siscomex_global = st.number_input("Siscomex/Taxas (R$)", min_value=0.0, step=0.01, format="%.2f")
+    st.header("⚙️ GLOBAL")
+    v_frete = st.number_input("FRETE TOTAL", min_value=0.0, step=0.01)
+    v_seguro = st.number_input("SEGURO TOTAL", min_value=0.0, step=0.01)
+    v_taxas = st.number_input("SISCOMEX/TAXAS", min_value=0.0, step=0.01)
     
     st.divider()
-    st.header("🏢 REGIME E PIS/COFINS")
-    regime = st.selectbox("Regime Empresa", ["Lucro Real (11,75%)", "Lucro Presumido (3,65%)"])
-    aliq_pis = 2.10 if "Real" in regime else 0.65
-    aliq_cofins = 9.65 if "Real" in regime else 3.00
+    st.header("🏢 REGIME")
+    regime = st.selectbox("REGIME", ["LUCRO REAL", "LUCRO PRESUMIDO"])
     
-    tem_majorada = st.checkbox("Majorada (+1% COFINS)")
-    if tem_majorada: aliq_cofins += 1.0
+    # Alíquotas Federais
+    p_pis = 2.10 if "REAL" in regime else 0.65
+    p_cofins = 9.65 if "REAL" in regime else 3.00
+    
+    if st.checkbox("MAJORADA (+1%)"): p_cofins += 1.0
 
     st.divider()
-    st.header("⚖️ ICMS E DIFERIMENTO")
-    tem_dif = st.radio("Diferimento?", ("Não", "Sim"))
-    aliq_icms = st.number_input("Alíquota ICMS (%)", value=18.0)
-    perc_dif = st.number_input("% do Diferimento (Ex: 100)", value=100.0) if tem_dif == "Sim" else 0.0
+    st.header("⚖️ ICMS")
+    tem_dif = st.radio("DIFERIMENTO?", ("NÃO", "SIM"))
+    aliq_icms = st.number_input("ALÍQUOTA ICMS (%)", value=18.0)
+    
+    perc_dif = 0.0
+    if tem_dif == "SIM":
+        perc_dif = st.number_input("PERCENTUAL DIFERIDO (0-100)", value=100.0)
 
-# --- MODELO DE PLANILHA MINIMALISTA ---
-st.subheader("📋 1. Baixe o Modelo Minimalista")
-modelo_min = pd.DataFrame({
-    'Produto': ['Item A'],
-    'NCM': ['8517.62.77'],
-    'Qtd': [10],
-    'Valor_Unitario': [100.00],
-    'Aliq_II': [14.0],  # Você preenche se quiser, se não o Arcanum usa 0
-    'Aliq_IPI': [5.0]    # Você preenche se quiser
+# --- DOWNLOAD MODELO ---
+st.subheader("📋 1. MODELO DE IMPORTAÇÃO")
+df_mod = pd.DataFrame({
+    'PRODUTO': ['ITEM_01'],
+    'QTD': [1],
+    'VLR_UNITARIO': [1000.00],
+    'ALIQ_II': [14.0],
+    'ALIQ_IPI': [5.0]
 })
+buf_mod = io.BytesIO()
+with pd.ExcelWriter(buf_mod, engine='openpyxl') as wr:
+    df_mod.to_excel(wr, index=False)
 
-buffer_mod = io.BytesIO()
-with pd.ExcelWriter(buffer_mod, engine='openpyxl') as writer:
-    modelo_min.to_excel(writer, index=False)
-
-st.download_button("📥 Baixar Planilha Exemplo", buffer_mod.getvalue(), "modelo_arcanum.xlsx")
-
+st.download_button("📥 BAIXAR MODELO EXCEL", buf_mod.getvalue(), "modelo_arcanum.xlsx")
 st.divider()
 
-# --- UPLOAD E MÁGICA ---
-st.subheader("📦 2. Upload e Resultado")
-up = st.file_uploader("Suba sua planilha", type=["xlsx"])
+# --- UPLOAD E PROCESSAMENTO ---
+st.subheader("📦 2. ANÁLISE DE DADOS")
+up = st.file_uploader("SUBIR PLANILHA PREENCHIDA", type=["xlsx"])
 
 if up:
     df = pd.read_excel(up)
-    with st.spinner("Calculando..."):
-        # Cálculo do Valor Aduaneiro por Item
-        df['VLR_PROD_TOTAL'] = df['Qtd'] * df['Valor_Unitario']
-        total_prods = df['VLR_PROD_TOTAL'].sum()
+    with st.spinner("PROCESSANDO..."):
+        # Cálculos de Base
+        df['VLR_PROD_TOTAL'] = df['Qtd'] * df['Valor_Unitario'] if 'Qtd' in df.columns else df['QTD'] * df['VLR_UNITARIO']
+        total_geral = df['VLR_PROD_TOTAL'].sum()
         
-        # Rateio
-        df['FRETE_RAT'] = (df['VLR_PROD_TOTAL'] / total_prods) * v_frete_global
-        df['SEGURO_RAT'] = (df['VLR_PROD_TOTAL'] / total_prods) * v_seguro_global
-        df['TAXA_RAT'] = (df['VLR_PROD_TOTAL'] / total_prods) * v_siscomex_global
+        # Rateios
+        df['RAT_FRETE'] = (df['VLR_PROD_TOTAL'] / total_geral) * v_frete
+        df['RAT_SEGURO'] = (df['VLR_PROD_TOTAL'] / total_geral) * v_seguro
+        df['RAT_TAXAS'] = (df['VLR_PROD_TOTAL'] / total_geral) * v_taxas
         
-        # Valor Aduaneiro (Base para II, PIS, COFINS)
-        df['VLR_ADUANEIRO'] = df['VLR_PROD_TOTAL'] + df['FRETE_RAT'] + df['SEGURO_RAT']
+        # Valor Aduaneiro (Base II, PIS, COFINS)
+        df['VLR_ADUANEIRO'] = df['VLR_PROD_TOTAL'] + df['RAT_FRETE'] + df['RAT_SEGURO']
         
-        # Impostos Federais
-        df['II_VLR'] = df['VLR_ADUANEIRO'] * (df.get('Aliq_II', 0) / 100)
-        df['IPI_VLR'] = (df['VLR_ADUANEIRO'] + df['II_VLR']) * (df.get('Aliq_IPI', 0) / 100)
-        df['PIS_VLR'] = df['VLR_ADUANEIRO'] * (aliq_pis / 100)
-        df['COFINS_VLR'] = df['VLR_ADUANEIRO'] * (aliq_cofins / 100)
+        # Impostos
+        df['VLR_II'] = df['VLR_ADUANEIRO'] * (df.get('ALIQ_II', df.get('Aliq_II', 0)) / 100)
+        df['VLR_IPI'] = (df['VLR_ADUANEIRO'] + df['VLR_II']) * (df.get('ALIQ_IPI', df.get('Aliq_IPI', 0)) / 100)
+        df['VLR_PIS'] = df['VLR_ADUANEIRO'] * (p_pis / 100)
+        df['VLR_COFINS'] = df['VLR_ADUANEIRO'] * (p_cofins / 100)
         
-        # Base ICMS (Por Dentro)
-        # Itens + II + IPI + PIS + COFINS + Taxas / (1 - Aliq)
-        soma_base = (df['VLR_ADUANEIRO'] + df['II_VLR'] + df['IPI_VLR'] + 
-                     df['PIS_VLR'] + df['COFINS_VLR'] + df['TAXA_RAT'])
+        # Base ICMS Por Dentro
+        soma_base = (df['VLR_ADUANEIRO'] + df['VLR_II'] + df['VLR_IPI'] + 
+                     df['VLR_PIS'] + df['VLR_COFINS'] + df['RAT_TAXAS'])
         
         fator = 1 - (aliq_icms / 100)
         df['BASE_ICMS'] = soma_base / fator
-        df['ICMS_RECOLHER'] = (df['BASE_ICMS'] * (aliq_icms / 100)) * (1 - (perc_dif / 100))
         
-        st.success("Análise Concluída!")
-        st.dataframe(df[['Produto', 'VLR_ADUANEIRO', 'II_VLR', 'IPI_VLR', 'BASE_ICMS', 'ICMS_RECOLHER']].style.format(precision=2))
+        # ICMS Final com Diferimento
+        df['ICMS_CHEIO'] = df['BASE_ICMS'] * (aliq_icms / 100)
+        df['DIFERIDO_VLR'] = df['ICMS_CHEIO'] * (perc_dif / 100)
+        df['ICMS_RECOLHER'] = df['ICMS_CHEIO'] - df['DIFERIDO_VLR']
+        
+        st.success("CÁLCULOS EXECUTADOS")
+        cols = ['PRODUTO', 'VLR_ADUANEIRO', 'VLR_II', 'VLR_IPI', 'BASE_ICMS', 'ICMS_RECOLHER']
+        st.dataframe(df[cols].style.format(precision=2), use_container_width=True)
+
+        # Download do Resultado
+        buf_res = io.BytesIO()
+        with pd.ExcelWriter(buf_res, engine='openpyxl') as wr:
+            df.to_excel(wr, index=False)
+        st.download_button("📥 BAIXAR RESULTADO COMPLETO", buf_res.getvalue(), "resultado_arcanum.xlsx")
+
+st.sidebar.write("ESTADO: OPERACIONAL")
