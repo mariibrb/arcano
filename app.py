@@ -6,14 +6,15 @@ from fpdf import FPDF
 # Configuração Básica - Projeto Sentinela
 st.set_page_config(page_title="ARCANUM - Auditoria de Importação", layout="wide")
 
-# --- CLASSE PARA GERAÇÃO DO PDF (REPLICA DO MODELO 607 COM ACRÉSCIMO DA TARJA) ---
+# --- CLASSE PARA GERAÇÃO DO PDF (REPLICA DO MODELO 607 COM ACRÉSCIMO DA TARJA CENTRALIZADA) ---
 class EspelhoDANFE(FPDF):
     def header(self):
-        # --- ACRÉSCIMO: Tarja Diagonal Vermelha Transparente ---
+        # --- ACRÉSCIMO: Tarja Diagonal Vermelha Transparente CENTRALIZADA ---
         self.set_font('Arial', 'B', 35)
         self.set_text_color(240, 200, 200) # Vermelho bem claro/transparente
+        # Rotação 45 graus no centro da folha A4 (105x148.5)
         with self.rotation(45, 105, 148.5):
-            self.text(25, 148.5, "SEM VALOR FISCAL - CONFERÊNCIA")
+            self.text(15, 148.5, "SEM VALOR FISCAL - CONFERÊNCIA")
         
         # Restaura cor para o layout original
         self.set_text_color(0, 0, 0)
@@ -94,6 +95,7 @@ def gerar_pdf(df_final, params):
     pdf.set_font('Arial', 'B', 7)
     pdf.cell(190, 5, 'DADOS DOS PRODUTOS / SERVIÇOS', 1, 1, 'L')
     
+    # Larguras recalculadas para somar 190mm e alinhar colunas como V.IPI
     cols = [
         ('CÓDIGO', 12), ('DESCRIÇÃO', 48), ('NCM', 15), ('CST', 8), ('CFOP', 10), 
         ('QTD', 10), ('V.UNIT', 14), ('V.TOT', 18), ('BC.ICMS', 15), ('V.ICMS', 13), 
@@ -219,7 +221,7 @@ if arquivo_subido and taxa_cambio > 0:
             'v_total_nota': v_prod_composto + v_ipi_tot + outras_desp_total + (0 if tem_dif == "Sim" else v_icms_recolher)
         }
 
-        st.success("✅ Alinhamento mantido e Tarja de Segurança adicionada!")
+        st.success("✅ Alinhamento corrigido e Tarja centralizada!")
         col1, col2 = st.columns(2)
         with col1:
             buffer_xlsx = io.BytesIO()
