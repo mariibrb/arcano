@@ -60,7 +60,6 @@ def gerar_pdf(df_final, params):
     pdf.cell(38, 4, 'V. TOTAL PRODUTOS', 'LR', 1, 'L')
     
     pdf.set_font('Arial', 'B', 7)
-    # Valores de ICMS no quadro dependem da sua indicação de diferimento
     pdf.cell(38, 5, fmt(params['base_icms_header']), 'LRB', 0, 'R') 
     pdf.cell(38, 5, fmt(params['v_icms_header']), 'LRB', 0, 'R') 
     pdf.cell(38, 5, fmt(0.00), 'LRB', 0, 'R')
@@ -75,8 +74,8 @@ def gerar_pdf(df_final, params):
     pdf.cell(38, 4, 'VALOR TOTAL NOTA', 'LR', 1, 'L')
     
     pdf.set_font('Arial', 'B', 7)
-    pdf.cell(38, 5, fmt(0.00), 'LRB', 0, 'R')
-    pdf.cell(38, 5, fmt(0.00), 'LRB', 0, 'R')
+    pdf.cell(38, 5, fmt(0.00), 'LRB', 0, 'R') # Frete embutido no Aduaneiro
+    pdf.cell(38, 5, fmt(0.00), 'LRB', 0, 'R') # Seguro embutido no Aduaneiro
     pdf.cell(38, 5, fmt(params['afrmm']), 'LRB', 0, 'R') 
     pdf.cell(38, 5, fmt(params['v_ipi_tot']), 'LRB', 0, 'R') 
     pdf.cell(38, 5, fmt(params['v_total_nota']), 'LRB', 1, 'R')
@@ -160,7 +159,6 @@ if arquivo_subido and taxa_cambio > 0:
     df = pd.read_excel(arquivo_subido)
     df.columns = [c.upper().strip() for c in df.columns]
     
-    # Tratamento para evitar o KeyError
     col_vlr = next((c for c in ['VLR_UNITARIO_MOEDA', 'VLR_UNITARIO', 'VALOR_UNITARIO', 'VALOR'] if c in df.columns), None)
     col_qtd = next((c for c in ['QTD', 'QUANTIDADE'] if c in df.columns), None)
 
@@ -170,22 +168,31 @@ if arquivo_subido and taxa_cambio > 0:
 
     df['VLR_UNITARIO_BRL'] = df[col_vlr] * taxa_cambio
     df['VLR_PROD_TOTAL'] = df[col_qtd] * df['VLR_UNITARIO_BRL']
-    total_mercadoria = df['VLR_PROD_TOTAL'].sum()
+    total_merc_brl = df['VLR_PROD_TOTAL'].sum()
+    
+    # --- VOLTA DOS RATEIOS PROPORCIONAIS ---
+    fator = df['VLR_PROD_TOTAL'] / total_merc_brl if total_merc_brl > 0 else 0
+    df['FRETE_ITEM'] = v_frete * fator
+    df['SEGURO_ITEM'] = v_seguro * fator
+    df['TAXA_ITEM'] = v_taxas * fator
+    df['AFRMM_ITEM'] = v_afrmm * fator
+    
+    # --- COLUNA VALOR ADUANEIRO (BASE PARA II E IPI) ---
+    df['VALOR_ADUANEIRO'] = df['VLR_PROD_TOTAL'] + df['FRETE_ITEM'] + df['SEGURO_ITEM']
     
     # Tributos
-    df['VLR_II_ITEM'] = df['VLR_PROD_TOTAL'] * (df.get('ALIQ_II', 0)/100)
-    df['VLR_IPI_ITEM'] = (df['VLR_PROD_TOTAL'] + df['VLR_II_ITEM']) * (df.get('ALIQ_IPI', 0)/100)
+    df['VLR_II_ITEM'] = df['VALOR_ADUANEIRO'] * (df.get('ALIQ_II', 0)/100)
+    df['VLR_IPI_ITEM'] = (df['VALOR_ADUANEIRO'] + df['VLR_II_ITEM']) * (df.get('ALIQ_IPI', 0)/100)
     p_pis = 2.10 if regime == "Lucro Real" else 0.65
     p_cof = 9.65 if regime == "Lucro Real" else 3.00
-    v_pis_total = total_mercadoria * (p_pis/100)
-    v_cof_total = total_mercadoria * (p_cof/100)
+    df['VLR_PIS_ITEM'] = df['VLR_PROD_TOTAL'] * (p_pis/100)
+    df['VLR_COFINS_ITEM'] = df['VLR_PROD_TOTAL'] * (p_cof/100)
     
     # Composição: Aduaneiro + II + PIS + COFINS + Taxas
-    v_aduaneiro = total_mercadoria + v_frete + v_seguro
-    v_prod_composto = v_aduaneiro + df['VLR_II_ITEM'].sum() + v_pis_total + v_cof_total + v_taxas
+    v_prod_composto = df['VALOR_ADUANEIRO'].sum() + df['VLR_II_ITEM'].sum() + df['VLR_PIS_ITEM'].sum() + df['VLR_COFINS_ITEM'].sum() + v_taxas
     v_ipi_tot = df['VLR_IPI_ITEM'].sum()
     
-    # ICMS (Calculado apenas conforme sua escolha manual de diferimento)
+    # ICMS
     base_icms_real = 0.0
     v_icms_recolher = 0.0
     v_icms_diferido = 0.0
@@ -195,15 +202,15 @@ if arquivo_subido and taxa_cambio > 0:
         v_icms_diferido = v_icms_cheio * (perc_dif/100)
         v_icms_recolher = v_icms_cheio - v_icms_diferido
 
-    # Detalhamento por Item na Tabela
-    df['BC_ICMS_ITEM'] = 0.00 if tem_dif == "Sim" else (df['VLR_PROD_TOTAL'] / total_mercadoria) * base_icms_real
+    # Detalhamento para Tabela
+    df['BC_ICMS_ITEM'] = 0.00 if tem_dif == "Sim" else (df['VLR_PROD_TOTAL'] / total_merc_brl) * base_icms_real
     df['V_ICMS_ITEM'] = 0.00 if tem_dif == "Sim" else df['BC_ICMS_ITEM'] * (aliq_icms/100)
 
     params_pdf = {
         'v_prod_composto': v_prod_composto, 'frete': 0.0, 'seguro': 0.0, 'afrmm': v_afrmm,
         'v_ipi_tot': v_ipi_tot, 'v_icms_diferido': v_icms_diferido,
         'aliq_icms_val': aliq_icms, 'is_diferido': (tem_dif == "Sim"),
-        'cst_calculado': "151" if tem_dif == "Sim" else "100", # Lógica de Diferimento Corrigida
+        'cst_calculado': "151" if tem_dif == "Sim" else "100",
         'base_icms_header': 0.00 if tem_dif == "Sim" else base_icms_real,
         'v_icms_header': 0.00 if tem_dif == "Sim" else v_icms_recolher,
         'v_total_nota': v_prod_composto + v_ipi_tot + v_afrmm + (0 if tem_dif == "Sim" else v_icms_recolher)
