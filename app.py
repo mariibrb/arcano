@@ -6,7 +6,7 @@ from fpdf import FPDF
 # Configuração Básica - Design Nativo e Amplo
 st.set_page_config(page_title="ARCANUM - Auditoria de Importação", layout="wide")
 
-# --- CLASSE PARA GERAÇÃO DO PDF (LAYOUT FIEL AO MODELO ENVIADO) ---
+# --- CLASSE PARA GERAÇÃO DO PDF (LAYOUT FIEL AO MODELO DE NOTA FISCAL) ---
 class EspelhoDANFE(FPDF):
     def header(self):
         # Cabeçalho principal conforme o PDF enviado 
@@ -82,7 +82,7 @@ def gerar_pdf(df_final, params):
         pdf.cell(widths[7], 6, f"{row.get('VLR_IPI', 0):.2f}", 1, 0, 'R')
         pdf.ln()
         
-    # CORREÇÃO DEFINITIVA: Retorna os bytes diretamente (compatível com Streamlit 1.30+)
+    # RETORNO CORRIGIDO PARA BYTES (BYTESIO)
     return pdf.output()
 
 st.title("📜 ARCANUM")
@@ -165,8 +165,7 @@ if arquivo_subido:
             cols_reais = [c for c in col_exibicao if c in df.columns]
             st.dataframe(df[cols_reais].style.format(precision=2), use_container_width=True)
 
-            # PARÂMETROS PARA O PDF CONFORME LEGISLAÇÃO
-            # Vlr Prod Danfe = Aduaneiro + II + PIS + COFINS + Taxas (Aprox. 156k)
+            # PARÂMETROS PARA O PDF
             v_prod_danfe = df['VLR_ADUANEIRO'].sum() + df['VLR_II'].sum() + df['VLR_PIS'].sum() + df['VLR_COFINS'].sum() + v_taxas
             
             params_pdf = {
@@ -174,7 +173,7 @@ if arquivo_subido:
                 'v_ipi_tot': df['VLR_IPI'].sum(),
                 'v_prod_danfe': v_prod_danfe,
                 'afrmm': v_afrmm,
-                'v_total_nota': v_prod_danfe + df['VLR_IPI'].sum() + v_afrmm + df['ICMS_RECOLHER'].sum(), #
+                'v_total_nota': v_prod_danfe + df['VLR_IPI'].sum() + v_afrmm + df['ICMS_RECOLHER'].sum(),
                 'icms_diferido_tot': df['VLR_DIFERIDO'].sum(),
                 'pis_tot': df['VLR_PIS'].sum(),
                 'cofins_tot': df['VLR_COFINS'].sum(),
@@ -187,6 +186,6 @@ if arquivo_subido:
                 with pd.ExcelWriter(buffer_xlsx, engine='openpyxl') as writer: df.to_excel(writer, index=False)
                 st.download_button("📥 Baixar Espelho em Excel", buffer_xlsx.getvalue(), "espelho_arcanum.xlsx")
             with col_exp2:
-                # O PDF agora é gerado corretamente como bytes puros
+                # O PDF agora é gerado e baixado como bytes puros
                 pdf_bytes = gerar_pdf(df, params_pdf)
                 st.download_button("📥 Baixar PDF (Padrão Legislativo)", pdf_bytes, "espelho_arcanum_danfe.pdf", "application/pdf")
