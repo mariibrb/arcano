@@ -9,13 +9,13 @@ st.set_page_config(page_title="ARCANUM - Auditoria de Importação", layout="wid
 # --- CLASSE PARA GERAÇÃO DO PDF (LAYOUT FIEL AO MODELO ENVIADO) ---
 class EspelhoDANFE(FPDF):
     def header(self):
-        # Cabeçalho principal conforme o PDF enviado
+        # Cabeçalho principal conforme o PDF enviado 
         self.set_font('Arial', 'B', 14)
         self.cell(130, 15, 'Espelho de Nota Fiscal', 1, 0, 'C')
         self.set_font('Arial', '', 8)
         self.cell(60, 15, 'Entrada [X] Saída [ ]', 1, 1, 'C')
         
-        # Dados do Destinatário/Remetente (Conforme o seu PDF)
+        # Dados do Destinatário/Remetente (Conforme o PDF de exemplo) 
         self.set_font('Arial', 'B', 8)
         self.set_fill_color(240, 240, 240)
         self.cell(190, 8, 'DESTINATÁRIO / REMETENTE', 1, 1, 'L', fill=True)
@@ -48,11 +48,11 @@ def gerar_pdf(df_final, params):
     # --- TABELA DE PRODUTOS ---
     pdf.set_font('Arial', 'B', 7)
     pdf.set_fill_color(230, 230, 230)
-    # Colunas conforme o seu PDF
-    cols = ['DI', 'Ad.', 'Descricao', 'NCM', 'Qtd', 'Vl Unit (BRL)', 'Vl Tot (BRL)', 'ICMS Rec']
+    # Colunas conforme o PDF de exemplo 
+    cols_pdf = ['DI', 'Ad.', 'Descricao', 'NCM', 'Qtd', 'Vl Unit (BRL)', 'Vl Tot (BRL)', 'ICMS Rec']
     widths = [25, 12, 50, 20, 13, 25, 25, 20]
     
-    for i, col in enumerate(cols):
+    for i, col in enumerate(cols_pdf):
         pdf.cell(widths[i], 7, col, 1, 0, 'C', 1)
     pdf.ln()
 
@@ -68,7 +68,8 @@ def gerar_pdf(df_final, params):
         pdf.cell(widths[7], 6, f"{row.get('ICMS_RECOLHER', 0):.2f}", 1, 0, 'R')
         pdf.ln()
         
-    return pdf.output()
+    # CORREÇÃO: Converter output para latin-1 para garantir compatibilidade de bytes
+    return pdf.output(dest='S').encode('latin-1')
 
 st.title("📜 ARCANUM")
 st.write("Módulo de Auditoria de Importação e Geração de Espelho Fiscal - Projeto Sentinela")
@@ -160,9 +161,9 @@ if arquivo_subido:
             st.divider()
             st.success("📝 Espelho da Nota Fiscal Gerado!")
             
-            # --- CORREÇÃO DO KEYERROR AQUI ---
-            cols_exibicao = ['DI', 'ADICAO', 'ITEM', 'NCM', 'PRODUTO', 'VLR_ADUANEIRO', 'VLR_II', 'RAT_AFRMM', 'BASE_ICMS', 'ICMS_RECOLHER']
-            cols_reais = [c for c in cols_exibicao if c in df.columns]
+            # Bloqueio dinâmico para evitar KeyError na visualização 
+            col_exibicao = ['DI', 'ADICAO', 'ITEM', 'NCM', 'PRODUTO', 'VLR_ADUANEIRO', 'VLR_II', 'RAT_AFRMM', 'BASE_ICMS', 'ICMS_RECOLHER']
+            cols_reais = [c for c in col_exibicao if c in df.columns]
             st.dataframe(df[cols_reais].style.format(precision=2), use_container_width=True)
 
             params_pdf = {
@@ -178,6 +179,7 @@ if arquivo_subido:
                 with pd.ExcelWriter(buffer_xlsx, engine='openpyxl') as writer: df.to_excel(writer, index=False)
                 st.download_button("📥 Baixar Espelho em Excel", buffer_xlsx.getvalue(), "espelho_arcanum.xlsx")
             with col_exp2:
+                # O PDF agora é retornado como bytes codificados
                 pdf_output = gerar_pdf(df, params_pdf)
                 st.download_button("📥 Baixar PDF (Estilo DANFE)", pdf_output, "espelho_danfe_arcanum.pdf", "application/pdf")
         else:
