@@ -1,112 +1,79 @@
 import streamlit as st
 import pandas as pd
-import xmltodict
-import io
 
-# Configuração da Página - Mantendo a identidade visual épica
-st.set_page_config(page_title="ARCANUM - Análise de Importação", layout="wide")
+# Configuração de Identidade do Arcanum
+st.set_page_config(page_title="ARCANUM - Inteligência Fiscal", layout="wide")
 
-def carregar_estilos():
-    st.markdown("""
-        <style>
-        .main { background-color: #0e1117; }
-        .stTitle { color: #f1c40f; font-family: 'serif'; }
-        </style>
-    """, unsafe_allow_html=True)
+st.markdown("# 📜 ARCANUM")
+st.markdown("### *Módulo de Cálculo e Rateio de Importação*")
+st.divider()
 
-def processar_xml_importacao(files):
-    dados_finais = []
+# --- PAINEL DE CONTROLE (DADOS FIXOS) ---
+with st.sidebar:
+    st.header("⚙️ Parâmetros da Importação")
+    st.info("Preencha os valores globais para o rateio automático.")
     
-    for file in files:
-        try:
-            # Lógica de decifrar o XML (O Arcano em ação)
-            conteudo = file.read()
-            dict_xml = xmltodict.parse(conteudo)
-            
-            # Navegação na hierarquia fiscal do XML da NF-e de Importação
-            nfe = dict_xml.get('nfeProc', {}).get('NFe', {}).get('infNFe', {})
-            detalhes = nfe.get('det', [])
-            
-            # Garantir que detalhes seja uma lista (mesmo com um item só)
-            if isinstance(detalhes, dict):
-                detalhes = [detalhes]
-                
-            for item in detalhes:
-                prod = item.get('prod', {})
-                imposto = item.get('imposto', {})
-                
-                # Extração das 21 colunas e base de cálculo (Exemplo de lógica Arcanum)
-                ii = imposto.get('II', {})
-                ipi = imposto.get('IPI', {}).get('IPITrib', {})
-                pis = imposto.get('PIS', {}).get('PISAliq', {})
-                cofins = imposto.get('COFINS', {}).get('COFINSAliq', {})
-                icms = imposto.get('ICMS', {}).get('ICMS00', {}) # Exemplo para tributada integral
-                
-                # Cálculo "Por Dentro" e Rateios (A essência do Arcanum)
-                v_bc_ii = float(ii.get('vBC', 0))
-                v_ii = float(ii.get('vII', 0))
-                v_desp_adu = float(ii.get('vDespAdu', 0))
-                v_iof = float(ii.get('vIOF', 0))
-                
-                # Memória de Cálculo do Arcano
-                linha = {
-                    "Item": prod.get('nItem'),
-                    "NCM": prod.get('NCM'),
-                    "Descrição": prod.get('xProd'),
-                    "VLR_ADUANEIRO": v_bc_ii,
-                    "I.I.": v_ii,
-                    "I.P.I.": float(ipi.get('vIPI', 0)),
-                    "PIS": float(pis.get('vPIS', 0)),
-                    "COFINS": float(cofins.get('vCOFINS', 0)),
-                    "TAXA_SISCOMEX": v_desp_adu,
-                    "BASE_ICMS_ESTIMADA": 0.0 # Aqui entra sua fórmula complexa de Diferimento/Cálculo por dentro
-                }
-                
-                # Cálculo do ICMS com base na alíquota interna e inter (Simulação Arcanum)
-                aliq_icms = float(icms.get('pICMS', 0))
-                if aliq_icms > 0:
-                    # Cálculo complexo que você domina para validar o despachante
-                    v_bc_icms = (v_bc_ii + v_ii + v_iof + v_desp_adu + linha["I.P.I."] + linha["PIS"] + linha["COFINS"]) / (1 - (aliq_icms/100))
-                    linha["BASE_ICMS_ESTIMADA"] = round(v_bc_icms, 2)
-                
-                dados_finais.append(linha)
-                
-        except Exception as e:
-            st.error(f"Erro ao decifrar o mistério do arquivo {file.name}: {e}")
-            
-    return pd.DataFrame(dados_finais)
+    # Dados que são iguais para todos os itens daquela importação
+    v_frete_global = st.number_input("Valor Total do Frete (R$)", min_value=0.0, format="%.2f")
+    v_seguro_global = st.number_input("Valor Total do Seguro (R$)", min_value=0.0, format="%.2f")
+    v_siscomex_global = st.number_input("Taxa Siscomex / Taxas Portuárias (R$)", min_value=0.0, format="%.2f")
+    aliq_icms = st.slider("Alíquota Interna de ICMS (%)", min_value=0, max_value=25, value=18)
+    
+    st.divider()
+    st.write("Configurado para o projeto **Sentinela**.")
 
-# --- INTERFACE DO USUÁRIO ---
-carregar_estilos()
+# --- INPUT DE PRODUTOS (DADOS VARIÁVEIS) ---
+st.subheader("📦 Upload dos Itens")
+st.write("Faça o upload de uma planilha (CSV ou Excel) contendo: **Produto, NCM, Valor Aduaneiro e Impostos (II, IPI, PIS, COFINS).**")
 
-st.title("📜 ARCANUM")
-st.subheader("Decifrador de Notas Fiscais de Importação")
+uploaded_file = st.file_uploader("Arraste sua lista de produtos aqui", type=["csv", "xlsx"])
 
-st.markdown("""
----
-*O Arcanum analisa a hierarquia fiscal das notas de entrada, valida os cálculos do despachante 
-e gera o espelho fiel para o faturamento.*
-""")
+if uploaded_file:
+    # Lógica para ler CSV ou Excel
+    if uploaded_file.name.endswith('.csv'):
+        df_produtos = pd.read_csv(uploaded_file)
+    else:
+        df_produtos = pd.read_excel(uploaded_file)
 
-uploaded_files = st.file_uploader("Envie os XMLs das Notas de Importação", type="xml", accept_multiple_files=True)
-
-if uploaded_files:
-    with st.spinner("O Arcano está processando as fórmulas..."):
-        df_resultado = processar_xml_importacao(uploaded_files)
+    # --- A MÁGICA DO ARCANUM (CÁLCULOS E RATEIO) ---
+    with st.spinner("O Arcanum está processando o rateio..."):
         
-        if not df_resultado.empty:
-            st.success("Mistérios resolvidos! Confira a análise abaixo:")
-            
-            # Exibição dos dados
-            st.dataframe(df_resultado, use_container_width=True)
-            
-            # Exportação para o cliente
-            csv = df_resultado.to_csv(index=False).encode('utf-8')
-            st.download_button(
-                label="📥 Baixar Memória de Cálculo (Espelho)",
-                data=csv,
-                file_name="arcanum_analise_importacao.csv",
-                mime="text/csv",
-            )
+        # 1. Calcular o Valor Total dos Produtos para base de rateio
+        # Assumindo que a coluna se chama 'Valor_Aduaneiro' ou 'Valor_Produto'
+        col_valor = 'Valor_Aduaneiro' if 'Valor_Aduaneiro' in df_produtos.columns else df_produtos.columns[2]
+        total_aduaneiro = df_produtos[col_valor].sum()
 
-st.sidebar.info(f"Faz parte do Ecossistema Sentinela de Mariana.")
+        # 2. Executar o Rateio Proporcional
+        df_produtos['FRETE_RATEADO'] = (df_produtos[col_valor] / total_aduaneiro) * v_frete_global
+        df_produtos['SEGURO_RATEADO'] = (df_produtos[col_valor] / total_aduaneiro) * v_seguro_global
+        df_produtos['TAXAS_RATEADAS'] = (df_produtos[col_valor] / total_aduaneiro) * v_siscomex_global
+
+        # 3. Somatória das bases para o Cálculo "Por Dentro" do ICMS
+        # Somamos: Valor Item + II + IPI + PIS + COFINS + Frete + Seguro + Taxas
+        cols_impostos = ['II', 'IPI', 'PIS', 'COFINS'] # Nomes esperados na sua planilha
+        
+        # Soma os impostos existentes na planilha
+        soma_impostos = df_produtos[cols_impostos].sum(axis=1)
+        
+        # Base antes do ICMS
+        base_parcial = df_produtos[col_valor] + soma_impostos + df_produtos['FRETE_RATEADO'] + df_produtos['SEGURO_RATEADO'] + df_produtos['TAXAS_RATEADAS']
+        
+        # Cálculo final do ICMS por dentro: Base / (1 - Alíquota)
+        fator_icms = 1 - (aliq_icms / 100)
+        df_produtos['BASE_ICMS_ARCANUM'] = base_parcial / fator_icms
+        df_produtos['VALOR_ICMS_ARCANUM'] = df_produtos['BASE_ICMS_ARCANUM'] * (aliq_icms / 100)
+
+        # --- EXIBIÇÃO DO RESULTADO ---
+        st.success("Mágica concluída! Tabela de importação gerada com sucesso.")
+        
+        # Formatando para exibição
+        st.dataframe(df_produtos.style.format(precision=2), use_container_width=True)
+
+        # Download do resultado pronto para o faturamento
+        csv = df_produtos.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="📥 Baixar Tabela Preenchida (Excel/CSV)",
+            data=csv,
+            file_name="arcanum_resultado_final.csv",
+            mime="text/csv",
+        )
