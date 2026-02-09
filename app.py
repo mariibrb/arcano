@@ -47,6 +47,7 @@ def gerar_pdf(df_final):
         pdf.cell(larguras[8], 6, f"{row['ICMS_RECOLHER']:.2f}", 1, 0, 'R')
         pdf.ln()
         
+    # Retorna os bytes do PDF
     return pdf.output()
 
 st.title("📜 ARCANUM")
@@ -106,60 +107,45 @@ with col_up:
 if arquivo_subido:
     df = pd.read_excel(arquivo_subido)
     with st.spinner("Processando auditoria fiscal..."):
-        # 1. Normalizar nomes de colunas (Maiúsculas e sem espaços)
         df.columns = [c.upper().strip() for c in df.columns]
         
-        # 2. Identificar colunas essenciais (Segurança contra KeyError)
-        colunas_vlr_possiveis = ['VLR_UNITARIO_MOEDA', 'VLR_UNITARIO', 'VALOR_UNITARIO', 'VALOR']
-        col_vlr = next((c for c in colunas_vlr_possiveis if c in df.columns), None)
-        
+        col_vlr = next((c for c in ['VLR_UNITARIO_MOEDA', 'VLR_UNITARIO', 'VALOR_UNITARIO', 'VALOR'] if c in df.columns), None)
         col_qtd = next((c for c in ['QTD', 'QUANTIDADE'] if c in df.columns), None)
 
         if col_vlr is None or col_qtd is None:
-            st.error(f"❌ Erro de Colunas: Certifique-se que a planilha tem as colunas 'QTD' e 'VLR_UNITARIO_MOEDA'. Colunas encontradas: {list(df.columns)}")
+            st.error(f"❌ Erro de Colunas: Verifique se a planilha tem 'QTD' e 'VLR_UNITARIO_MOEDA'.")
             st.stop()
 
-        # 3. Conversão para BRL e Valor Total dos Itens
         df['VLR_UNITARIO_BRL'] = df[col_vlr] * taxa_cambio
         df['VLR_PROD_TOTAL'] = df[col_qtd] * df['VLR_UNITARIO_BRL']
         total_geral_prods = df['VLR_PROD_TOTAL'].sum()
         
         if total_geral_prods > 0:
-            # 4. Rateios Proporcionais
             df['RAT_FRETE'] = (df['VLR_PROD_TOTAL'] / total_geral_prods) * v_frete
             df['RAT_SEGURO'] = (df['VLR_PROD_TOTAL'] / total_geral_prods) * v_seguro
             df['RAT_TAXAS'] = (df['VLR_PROD_TOTAL'] / total_geral_prods) * v_taxas
             df['RAT_AFRMM'] = (df['VLR_PROD_TOTAL'] / total_geral_prods) * v_afrmm
             
-            # 5. Valor Aduaneiro (Base II, PIS e COFINS)
             df['VLR_ADUANEIRO'] = df['VLR_PROD_TOTAL'] + df['RAT_FRETE'] + df['RAT_SEGURO']
-            
-            # 6. Impostos Federais
             df['VLR_II'] = df['VLR_ADUANEIRO'] * (df.get('ALIQ_II', 0) / 100)
             df['VLR_IPI'] = (df['VLR_ADUANEIRO'] + df['VLR_II']) * (df.get('ALIQ_IPI', 0) / 100)
             df['VLR_PIS'] = df['VLR_ADUANEIRO'] * (p_pis / 100)
             df['VLR_COFINS'] = df['VLR_ADUANEIRO'] * (p_cofins / 100)
             
-            # 7. Base ICMS "Por Dentro" (Gross-up) com Siscomex e AFRMM
             soma_componentes = (df['VLR_ADUANEIRO'] + df['VLR_II'] + df['VLR_IPI'] + 
                                 df['VLR_PIS'] + df['VLR_COFINS'] + df['RAT_TAXAS'] + df['RAT_AFRMM'])
             
-            fator_por_dentro = 1 - (aliq_icms / 100)
-            df['BASE_ICMS'] = soma_componentes / fator_por_dentro
-            
-            # 8. ICMS Final e Diferimento
+            df['BASE_ICMS'] = soma_componentes / (1 - (aliq_icms / 100))
             df['ICMS_CHEIO'] = df['BASE_ICMS'] * (aliq_icms / 100)
             df['VLR_DIFERIDO'] = df['ICMS_CHEIO'] * (perc_dif / 100)
             df['ICMS_RECOLHER'] = df['ICMS_CHEIO'] - df['VLR_DIFERIDO']
             
-            # --- EXIBIÇÃO ---
             st.divider()
             st.success("📝 Espelho da Nota Fiscal Gerado!")
             
-            colunas_exibicao = ['DI', 'ADICAO', 'ITEM', 'NCM', 'PRODUTO', 'VLR_ADUANEIRO', 'VLR_II', 'RAT_AFRMM', 'BASE_ICMS', 'ICMS_RECOLHER']
-            st.dataframe(df[colunas_exibicao].style.format(precision=2), use_container_width=True)
+            col_exib = ['DI', 'ADICAO', 'ITEM', 'NCM', 'PRODUTO', 'VLR_ADUANEIRO', 'VLR_II', 'RAT_AFRMM', 'BASE_ICMS', 'ICMS_RECOLHER']
+            st.dataframe(df[col_exib].style.format(precision=2), use_container_width=True)
 
-            # --- EXPORTAÇÃO ---
             col_exp1, col_exp2 = st.columns(2)
             with col_exp1:
                 buffer_xlsx = io.BytesIO()
@@ -168,7 +154,9 @@ if arquivo_subido:
                 st.download_button("📥 Baixar Espelho em Excel", buffer_xlsx.getvalue(), "espelho_arcanum_final.xlsx")
             
             with col_exp2:
+                # O fpdf2 gera o PDF como uma string de bytes ou salva em arquivo
+                # Para o Streamlit, precisamos dos bytes.
                 pdf_output = gerar_pdf(df)
-                st.download_button("📥 Baixar PDF (Estilo DANFE)", pdf_output, "espelho_danfe_arcanum.pdf", "application/pdf")
+                st.download_button("📥 Baixar PDF (Estilo DANFE)", bytes(pdf_output), "espelho_danfe_arcanum.pdf", "application/pdf")
         else:
-            st.error("Erro: O Valor Bruto resultou em zero. Verifique o Câmbio e a Planilha.")
+            st.error("Erro: Valor Bruto zero.")
