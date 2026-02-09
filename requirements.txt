@@ -1,4 +1,4 @@
 streamlit
 pandas
-xmltodict
 openpyxl
+fpdf2
