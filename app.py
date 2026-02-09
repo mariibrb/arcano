@@ -29,34 +29,34 @@ with st.sidebar:
     st.divider()
     st.header("🏢 Regime e Impostos")
 
-    # 1. Regime Tributário (Define PIS/COFINS)
     regime = st.selectbox("Regime Tributário da Empresa", ["Lucro Real (Não Cumulativo)", "Lucro Presumido (Cumulativo)"])
     
     if "Lucro Real" in regime:
-        p_pis_sugerido, p_cofins_sugerido = 2.10, 9.65 # Alíquotas padrão importação Lucro Real
+        p_pis_sugerido, p_cofins_sugerido = 2.10, 9.65
     else:
         p_pis_sugerido, p_cofins_sugerido = 0.65, 3.00
 
     aliq_pis = st.number_input("Alíquota PIS (%)", value=p_pis_sugerido, step=0.01)
-    
-    # Campo de Alíquota Majorada
     aliq_cofins_base = st.number_input("Alíquota COFINS Base (%)", value=p_cofins_sugerido, step=0.01)
     aliq_majorada = st.number_input("Alíquota Majorada (+1%)?", min_value=0.0, max_value=10.0, value=0.0, step=1.0)
-    
     aliq_cofins_total = aliq_cofins_base + aliq_majorada
-    st.caption(f"COFINS Total: {aliq_cofins_total:.2f}%")
 
     st.divider()
 
-    # 2. Lógica de ICMS e Diferimento
-    tem_diferimento = st.radio("Existe ICMS Diferido?", ("Não", "Sim"))
+    # --- NOVA LÓGICA DE DIFERIMENTO MAIS CLARA ---
+    st.header("⚖️ ICMS")
+    aliq_icms = st.number_input("Alíquota ICMS da Operação (%)", min_value=0.0, max_value=100.0, value=18.0, step=0.01)
     
-    aliq_icms = st.number_input("Alíquota ICMS Cheia (%)", min_value=0.0, max_value=100.0, value=18.0, step=0.01)
+    tem_diferimento = st.radio("Haverá Diferimento?", ("Não", "Sim"))
     
     if tem_diferimento == "Sim":
-        aliq_diferida = st.number_input("Alíquota do Diferimento (%)", min_value=0.0, max_value=aliq_icms, value=aliq_icms, step=0.01)
+        # Aqui o usuário digita a porcentagem do benefício (ex: 100% para diferir tudo)
+        perc_diferimento = st.number_input("Percentual do Diferimento (Ex: 100 para Total)", min_value=0.0, max_value=100.0, value=100.0, step=0.1)
+        # O sistema calcula a alíquota que será efetivamente abatida
+        aliq_diferida_calculada = (perc_diferimento / 100) * aliq_icms
+        st.warning(f"Diferindo {perc_diferimento}% dos {aliq_icms}% (Abatimento de {aliq_diferida_calculada:.2f} pontos)")
     else:
-        aliq_diferida = 0.0
+        aliq_diferida_calculada = 0.0
 
     st.divider()
     st.write("PROJETO SENTINELA")
@@ -73,21 +73,16 @@ if uploaded_file:
         total_aduaneiro = df[col_valor].sum()
 
         if total_aduaneiro > 0:
-            # Rateio de Despesas
             df['FRETE_RATEADO'] = (df[col_valor] / total_aduaneiro) * v_frete_global
             df['SEGURO_RATEADO'] = (df[col_valor] / total_aduaneiro) * v_seguro_global
             df['TAXAS_RATEADAS'] = (df[col_valor] / total_aduaneiro) * v_siscomex_global
 
-            # Tratamento de II e IPI
             for col in ['II', 'IPI']:
                 if col not in df.columns: df[col] = 0.0
             
-            # Cálculo de PIS e COFINS (Incluindo a Majorada)
             df['PIS_CALCULADO'] = df[col_valor] * (aliq_pis / 100)
             df['COFINS_CALCULADO'] = df[col_valor] * (aliq_cofins_total / 100)
 
-            # Base de Cálculo ICMS (Cálculo "Por Dentro")
-            # A Majorada do COFINS entra na composição da base do ICMS!
             soma_base_parcial = (df[col_valor] + df['II'] + df['IPI'] + 
                                  df['PIS_CALCULADO'] + df['COFINS_CALCULADO'] + 
                                  df['FRETE_RATEADO'] + df['SEGURO_RATEADO'] + df['TAXAS_RATEADAS'])
@@ -95,18 +90,16 @@ if uploaded_file:
             fator_icms = 1 - (aliq_icms / 100)
             df['BASE_ICMS_ARCANUM'] = soma_base_parcial / fator_icms
             
-            # ICMS e Diferimento
             df['ICMS_TOTAL'] = df['BASE_ICMS_ARCANUM'] * (aliq_icms / 100)
-            df['VALOR_DIFERIDO'] = df['BASE_ICMS_ARCANUM'] * (aliq_diferida / 100)
+            # Valor diferido baseado na alíquota calculada pelo percentual
+            df['VALOR_DIFERIDO'] = df['BASE_ICMS_ARCANUM'] * (aliq_diferida_calculada / 100)
             df['ICMS_A_RECOLHER'] = df['ICMS_TOTAL'] - df['VALOR_DIFERIDO']
 
-            # Exibição
-            st.success("Cálculos Arcanum realizados com Majorada!")
-            colunas_exibir = [df.columns[0], col_valor, 'II', 'IPI', 'PIS_CALCULADO', 'COFINS_CALCULADO', 'BASE_ICMS_ARCANUM', 'ICMS_A_RECOLHER']
+            st.success("Cálculos Arcanum realizados!")
+            colunas_exibir = [df.columns[0], col_valor, 'BASE_ICMS_ARCANUM', 'ICMS_TOTAL', 'VALOR_DIFERIDO', 'ICMS_A_RECOLHER']
             st.dataframe(df[colunas_exibir].style.format(precision=2), use_container_width=True)
 
-            # Exportação
             buffer = io.BytesIO()
             with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-                df.to_excel(writer, index=False, sheet_name='Arcanum_Majorada')
-            st.download_button("📥 Baixar Planilha Arcanum", buffer.getvalue(), "arcanum_majorada.xlsx")
+                df.to_excel(writer, index=False, sheet_name='Arcanum')
+            st.download_button("📥 Baixar Planilha", buffer.getvalue(), "arcanum_analise.xlsx")
