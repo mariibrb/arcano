@@ -6,7 +6,7 @@ from fpdf import FPDF
 # 1. Configuração de Página: page_title="ARCANO", page_icon="⚙️", e layout="wide"
 st.set_page_config(page_title="ARCANO", page_icon="⚙️", layout="wide")
 
-# 2. Estilização CSS (CÓPIA FIEL DO PADRÃO VISUAL SOLICITADO)
+# 2. Estilização CSS (Ajuste Cirúrgico no Botão de Upload)
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;800&family=Plus+Jakarta+Sans:wght@400;700&display=swap');
@@ -15,14 +15,14 @@ st.markdown("""
     header, [data-testid="stHeader"] { display: none !important; }
     .stDeployButton {display:none !important;}
     
-    /* Fundo em degradê radial */
-    .stApp { 
-        background: radial-gradient(circle at top right, #FFDEEF 0%, #F8F9FA 100%) !important; 
-    }
-
     /* APLICAÇÃO GLOBAL DA FONTE MONTSERRAT 800 */
     html, body, [class*="css"], .stMarkdown, h1, h2, h3, p, li, label, input, button {
         font-family: 'Montserrat', sans-serif !important;
+    }
+
+    /* Fundo em degradê radial */
+    .stApp { 
+        background: radial-gradient(circle at top right, #FFDEEF 0%, #F8F9FA 100%) !important; 
     }
 
     h1 { 
@@ -40,6 +40,11 @@ st.markdown("""
         border-left: 5px solid #FF69B4;
         margin-bottom: 20px;
     }
+    
+    .instrucoes-card h3 {
+        font-weight: 800 !important;
+        margin-top: 0;
+    }
 
     /* CAMPOS DE PREENCHIMENTO EM BRANCO */
     [data-baseweb="input"], [data-baseweb="select"], .stNumberInput input, div[role="radiogroup"], .stSelectbox div {
@@ -55,16 +60,17 @@ st.markdown("""
         padding: 30px !important;
     }
 
-    /* BOTÃO BROWSE FILES (Rosa Sólido com Montserrat 800 - SEM UPPERCASE) */
-    [data-testid="stFileUploader"] section button {
+    /* --- O BOTÃO DE UPLOAD ESPECÍFICO --- */
+    [data-testid="stFileUploader"] button {
         background-color: #FF69B4 !important; 
         color: white !important; 
         border: 3px solid #FFFFFF !important;
         font-family: 'Montserrat', sans-serif !important;
-        font-weight: 800 !important;
+        font-weight: 800 !important; 
+        font-size: 1.1rem !important; /* Tamanho da letra maior */
         border-radius: 15px !important;
         box-shadow: 0 0 15px rgba(255, 105, 180, 0.4) !important;
-        text-transform: none !important; /* TEXTO AO NATURAL COMO NO EXEMPLO */
+        text-transform: none !important; /* APENAS A PRIMEIRA MAIÚSCULA */
     }
 
     /* BOTÕES DE DOWNLOAD */
@@ -72,13 +78,14 @@ st.markdown("""
         background-color: #FF69B4 !important; 
         color: white !important; 
         border: 3px solid #FFFFFF !important;
-        font-weight: 700 !important;
+        font-family: 'Montserrat', sans-serif !important;
+        font-weight: 800 !important;
         border-radius: 15px !important;
         box-shadow: 0 0 15px rgba(255, 105, 180, 0.4) !important;
         text-transform: uppercase;
     }
 
-    div.stDownloadButton > button:hover, [data-testid="stFileUploader"] section button:hover {
+    div.stDownloadButton > button:hover, [data-testid="stFileUploader"] button:hover {
         transform: translateY(-5px) !important;
         box-shadow: 0 10px 20px rgba(255, 105, 180, 0.6) !important;
     }
