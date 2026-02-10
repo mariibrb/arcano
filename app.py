@@ -52,16 +52,28 @@ st.markdown("""
         border-radius: 12px !important;
     }
 
-    /* 2. ZONA DE UPLOAD IDÊNTICA AO MODELO */
+    /* --- INSTRUÇÕES DE UPLOAD APLICADAS --- */
+    /* ZONA DE UPLOAD: Pontilhado Grosso e Fundo Branco */
     [data-testid="stFileUploader"] { 
-        border: 2px dashed #FF69B4 !important; 
+        border: 5px dashed #FF69B4 !important; /* Pontilhado Grosso de 5px */
         border-radius: 20px !important;
         background: #FFFFFF !important;
         padding: 30px !important;
     }
 
-    /* BOTÃO BROWSE FILES E DOWNLOADS (ROSA SÓLIDO MONTSERRAT 800) */
-    [data-testid="stFileUploader"] section button, 
+    /* BOTÃO BROWSE FILES (Rosa Sólido com Montserrat 800) */
+    [data-testid="stFileUploader"] section button {
+        background-color: #FF69B4 !important; 
+        color: white !important; 
+        border: 3px solid #FFFFFF !important;
+        font-family: 'Montserrat', sans-serif !important;
+        font-weight: 800 !important; /* Letra gordinha e bonita */
+        border-radius: 15px !important;
+        box-shadow: 0 0 15px rgba(255, 105, 180, 0.4) !important;
+        text-transform: uppercase;
+    }
+
+    /* BOTÕES DE DOWNLOAD (Mantendo padrão rosa vibrante) */
     div.stDownloadButton > button {
         background-color: #FF69B4 !important; 
         color: white !important; 
@@ -71,7 +83,6 @@ st.markdown("""
         border-radius: 15px !important;
         box-shadow: 0 0 15px rgba(255, 105, 180, 0.4) !important;
         text-transform: uppercase;
-        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
     }
 
     div.stDownloadButton > button:hover, [data-testid="stFileUploader"] section button:hover {
