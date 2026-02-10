@@ -3,26 +3,94 @@ import pandas as pd
 import io
 from fpdf import FPDF
 
-# Configuração Básica - Projeto Sentinela
-st.set_page_config(page_title="ARCANO", layout="wide")
+# 1. Configuração de Página: page_title="ALQUIMISTA", page_icon="⚙️", e layout="wide"
+st.set_page_config(page_title="ALQUIMISTA", page_icon="⚙️", layout="wide")
 
-# --- CLASSE PARA GERAÇÃO DO PDF (REPLICA DO MODELO 607 COM TUDO AJUSTADO) ---
+# 2. Paleta de Cores e Estilização CSS (Design Sentinela Dinâmico)
+st.markdown("""
+    <style>
+    /* Importação de Fontes */
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;800&family=Plus+Jakarta+Sans:wght@400;600&display=swap');
+
+    /* Fundo em degradê radial */
+    .stApp {
+        background: radial-gradient(circle at top right, #FFDEEF 0%, #F8F9FA 100%);
+    }
+
+    /* Remover header padrão do Streamlit */
+    header {display: none !important;}
+    .stDeployButton {display:none !important;}
+
+    /* Tipografia Global */
+    html, body, [class*="css"] {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+
+    h1 {
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 800;
+        color: #FF69B4;
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    /* Cards de Instrução */
+    .instrucoes-card {
+        background-color: rgba(255, 255, 255, 0.7);
+        border-left: 5px solid #FF69B4;
+        padding: 20px;
+        border-radius: 15px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+
+    /* Botões de Ação (Inputs e Selects) */
+    div.stButton > button:first-child {
+        border-radius: 15px;
+        background-color: white;
+        color: #6C757D;
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 800;
+        border: none;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+    }
+    div.stButton > button:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 12px rgba(0,0,0,0.15);
+    }
+
+    /* Botões de Download e Upload (Rosa Vibrante) */
+    .stDownloadButton > button, .stFileUploader section {
+        background-color: #FF69B4 !important;
+        color: white !important;
+        border: 3px solid white !important;
+        border-radius: 20px !important;
+        font-family: 'Montserrat', sans-serif !important;
+        font-weight: 800 !important;
+        box-shadow: 0 0 15px rgba(255, 105, 180, 0.4) !important;
+    }
+
+    /* File Uploader Custom */
+    [data-testid="stFileUploader"] {
+        border: 2px dashed #FF69B4;
+        border-radius: 20px;
+        background-color: white;
+        padding: 10px;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# --- CLASSE PARA GERAÇÃO DO PDF (Lógica Original Mantida) ---
 class EspelhoDANFE(FPDF):
     def header(self):
-        # --- TARJA DIAGONAL CENTRALIZADA ---
         self.set_font('Arial', 'B', 35)
-        self.set_text_color(240, 200, 200) # Vermelho transparente
-        
+        self.set_text_color(240, 200, 200)
         texto_tarja = "SEM VALOR FISCAL - CONFERÊNCIA"
         largura_texto = self.get_string_width(texto_tarja)
-        
-        # Rotação 45 graus no centro exato da folha A4 (105x148.5)
         with self.rotation(45, 105, 148.5):
             self.text(105 - (largura_texto / 2), 148.5, texto_tarja)
-        
         self.set_text_color(0, 0, 0)
-
-        # Quadro Emitente e Identificação
         self.rect(10, 10, 95, 25) 
         self.rect(105, 10, 35, 25)
         self.set_font('Arial', 'B', 10)
@@ -38,8 +106,6 @@ class EspelhoDANFE(FPDF):
         self.cell(35, 4, 'Nº 000.000.000', 0, 1, 'C') 
         self.set_x(105)
         self.cell(35, 4, 'Série 0', 0, 1, 'C') 
-
-        # Natureza da Operação
         self.rect(10, 35, 190, 8)
         self.set_xy(10, 35)
         self.set_font('Arial', '', 6)
@@ -47,8 +113,6 @@ class EspelhoDANFE(FPDF):
         self.set_font('Arial', 'B', 8)
         self.set_x(10)
         self.cell(190, 4, 'COMPRA PARA COMERCIALIZACAO', 0, 1, 'L')
-
-        # Destinatário
         self.ln(2)
         self.set_font('Arial', 'B', 8)
         self.cell(190, 5, 'DESTINATÁRIO / REMETENTE', 1, 1, 'L')
@@ -59,32 +123,26 @@ def gerar_pdf(df_final, params):
     pdf = EspelhoDANFE()
     pdf.add_page()
     fmt = lambda x: f"{x:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-
-    # --- QUADRO: CÁLCULO DO IMPOSTO ---
     pdf.set_font('Arial', 'B', 7)
     pdf.cell(190, 5, 'CÁLCULO DO IMPOSTO', 1, 1, 'L')
-    
     pdf.set_font('Arial', '', 6)
     pdf.cell(38, 4, 'BASE DE CÁLC DO ICMS', 'LR', 0, 'L')
     pdf.cell(38, 4, 'VALOR DO ICMS', 'LR', 0, 'L')
     pdf.cell(38, 4, 'BASE DE CÁLC ICMS ST', 'LR', 0, 'L')
     pdf.cell(38, 4, 'VALOR DO ICMS ST', 'LR', 0, 'L')
     pdf.cell(38, 4, 'V. TOTAL PRODUTOS', 'LR', 1, 'L')
-    
     pdf.set_font('Arial', 'B', 7)
     pdf.cell(38, 5, fmt(params['base_icms_header']), 'LRB', 0, 'R') 
     pdf.cell(38, 5, fmt(params['v_icms_header']), 'LRB', 0, 'R') 
     pdf.cell(38, 5, fmt(0.00), 'LRB', 0, 'R')
     pdf.cell(38, 5, fmt(0.00), 'LRB', 0, 'R')
     pdf.cell(38, 5, fmt(params['v_prod_composto']), 'LRB', 1, 'R') 
-    
     pdf.set_font('Arial', '', 6)
     pdf.cell(38, 4, 'VALOR DO FRETE', 'LR', 0, 'L')
     pdf.cell(38, 4, 'VALOR DO SEGURO', 'LR', 0, 'L')
     pdf.cell(38, 4, 'OUTRAS DESPESAS', 'LR', 0, 'L') 
     pdf.cell(38, 4, 'VALOR DO IPI', 'LR', 0, 'L') 
     pdf.cell(38, 4, 'VALOR TOTAL NOTA', 'LR', 1, 'L')
-    
     pdf.set_font('Arial', 'B', 7)
     pdf.cell(38, 5, fmt(0.00), 'LRB', 0, 'R') 
     pdf.cell(38, 5, fmt(0.00), 'LRB', 0, 'R') 
@@ -92,23 +150,12 @@ def gerar_pdf(df_final, params):
     pdf.cell(38, 5, fmt(params['v_ipi_tot']), 'LRB', 0, 'R') 
     pdf.cell(38, 5, fmt(params['v_total_nota']), 'LRB', 1, 'R')
     pdf.ln(5)
-
-    # --- QUADRO: DADOS DO PRODUTO (RESTAURADO AJUSTE DE LARGURAS) ---
     pdf.set_font('Arial', 'B', 7)
     pdf.cell(190, 5, 'DADOS DOS PRODUTOS / SERVIÇOS', 1, 1, 'L')
-    
-    # Colunas milimétricas para alinhamento perfeito
-    cols = [
-        ('CÓDIGO', 12), ('DESCRIÇÃO', 48), ('NCM', 15), ('CST', 8), ('CFOP', 10), 
-        ('QTD', 10), ('V.UNIT', 14), ('V.TOT', 18), ('BC.ICMS', 15), ('V.ICMS', 13), 
-        ('V.IPI', 13), ('%ICMS', 7), ('%IPI', 7)
-    ]
-    
+    cols = [('CÓDIGO', 12), ('DESCRIÇÃO', 48), ('NCM', 15), ('CST', 8), ('CFOP', 10), ('QTD', 10), ('V.UNIT', 14), ('V.TOT', 18), ('BC.ICMS', 15), ('V.ICMS', 13), ('V.IPI', 13), ('%ICMS', 7), ('%IPI', 7)]
     pdf.set_font('Arial', '', 5)
-    for txt, w in cols:
-        pdf.cell(w, 5, txt, 1, 0, 'C')
+    for txt, w in cols: pdf.cell(w, 5, txt, 1, 0, 'C')
     pdf.ln()
-
     for _, row in df_final.iterrows():
         pdf.cell(12, 5, "ITEM", 1, 0, 'C')
         pdf.cell(48, 5, str(row.get('PRODUTO', ''))[:38], 1)
@@ -119,13 +166,11 @@ def gerar_pdf(df_final, params):
         pdf.cell(14, 5, fmt(row.get('VLR_UNITARIO_BRL', 0)), 1, 0, 'R')
         pdf.cell(18, 5, fmt(row.get('VALOR_PRODUTO_NF_ITEM', 0)), 1, 0, 'R')
         pdf.cell(15, 5, fmt(row.get('BC_ICMS_ITEM', 0.00)), 1, 0, 'R') 
-        pdf.cell(13, 5, fmt(row.get('V_ICMS_ITEM', 0.00)), 1, 0, 'R') 
+        pdf.cell(14, 5, fmt(row.get('V_ICMS_ITEM', 0.00)), 1, 0, 'R') 
         pdf.cell(13, 5, fmt(row.get('VLR_IPI_ITEM', 0)), 1, 0, 'R')
         pdf.cell(7, 5, f"{params['aliq_icms_val']:.0f}%", 1, 0, 'C')
         pdf.cell(7, 5, f"{row.get('ALIQ_IPI', 0):.1f}%", 1, 0, 'C')
         pdf.ln()
-
-    # --- DADOS ADICIONAIS ---
     pdf.ln(5)
     pdf.set_font('Arial', 'B', 7)
     pdf.cell(190, 5, 'DADOS ADICIONAIS', 1, 1, 'L')
@@ -136,12 +181,40 @@ def gerar_pdf(df_final, params):
     else:
         obs = f"Informacoes Complementares: OPERAÇÃO TRIBUTADA INTEGRALMENTE. {obs_fixa}"
     pdf.multi_cell(190, 4, obs, 1)
-    
     return bytes(pdf.output())
 
-# --- INTERFACE ---
-st.title("📜 ARCANUM")
-st.divider()
+# --- INTERFACE E ESTRUTURA (UI/UX) ---
+st.markdown("<h1>⚙️ ALQUIMISTA</h1>", unsafe_allow_html=True)
+
+# Estrutura da Tela: Topo com duas colunas
+container_topo = st.container()
+with container_topo:
+    col_inst1, col_inst2 = st.columns(2)
+    with col_inst1:
+        st.markdown("""
+            <div class="instrucoes-card">
+                <h3>📖 Passo a Passo</h3>
+                <ol>
+                    <li>Preencha a taxa de câmbio e os custos logísticos.</li>
+                    <li>Suba a planilha de itens no modelo Arcanum.</li>
+                    <li>Realize o download do PDF e Excel auditados.</li>
+                </ol>
+            </div>
+        """, unsafe_allow_html=True)
+    with col_inst2:
+        st.markdown("""
+            <div class="instrucoes-card">
+                <h3>📊 O que será obtido?</h3>
+                <ul>
+                    <li>Cálculo automático de Valor Aduaneiro (CIF).</li>
+                    <li>Rateio proporcional de frete e seguro por item.</li>
+                    <li>Espelho DANFE com tarja de segurança.</li>
+                </ul>
+            </div>
+        """, unsafe_allow_html=True)
+
+# Divisória antes do upload
+st.markdown("---")
 
 col_cambio, col_log, col_fiscal = st.columns(3)
 with col_cambio:
@@ -157,23 +230,21 @@ with col_fiscal:
     tem_dif = st.radio("Diferimento?", ("Sim", "Não"), index=1, horizontal=True)
     perc_dif = st.number_input("Percentual Diferido (%)", min_value=0.0, value=0.0, step=0.1) if tem_dif == "Sim" else 0.0
 
-st.divider()
-
-# --- SEÇÃO 2: MODELO E UPLOAD ---
+# Seção de Modelo e Upload
 col_mod, col_up = st.columns([1, 2])
 with col_mod:
     df_modelo = pd.DataFrame({'PRODUTO': ['ITEM'], 'NCM': ['0000.00.00'], 'QTD': [0], 'VLR_UNITARIO_MOEDA': [0.0], 'ALIQ_II': [0.0], 'ALIQ_IPI': [0.0]})
     buffer_mod = io.BytesIO()
     with pd.ExcelWriter(buffer_mod, engine='openpyxl') as writer: df_modelo.to_excel(writer, index=False)
     st.download_button(label="📥 Baixar Modelo", data=buffer_mod.getvalue(), file_name="modelo_arcanum.xlsx")
+
 with col_up:
     arquivo_subido = st.file_uploader("Suba a planilha preenchida aqui", type=["xlsx"])
 
-# --- SEÇÃO 3: PROCESSAMENTO ---
+# Lógica de Dados (Preservada Integramente)
 if arquivo_subido and taxa_cambio > 0:
     df = pd.read_excel(arquivo_subido)
     df.columns = [c.upper().strip() for c in df.columns]
-    
     col_vlr = next((c for c in ['VLR_UNITARIO_MOEDA', 'VLR_UNITARIO', 'VALOR'] if c in df.columns), None)
     col_qtd = next((c for c in ['QTD', 'QUANTIDADE'] if c in df.columns), None)
 
@@ -182,7 +253,6 @@ if arquivo_subido and taxa_cambio > 0:
         df['VLR_UNITARIO_BRL'] = df[col_vlr] * taxa_cambio
         total_merc_brl = df['VLR_PROD_TOTAL'].sum()
         fator = df['VLR_PROD_TOTAL'] / total_merc_brl if total_merc_brl > 0 else 0
-        
         df['VALOR_ADUANEIRO'] = df['VLR_PROD_TOTAL'] + (v_frete * fator) + (v_seguro * fator)
         df['VLR_II_ITEM'] = df['VALOR_ADUANEIRO'] * (df.get('ALIQ_II', 0)/100)
         p_pis = 2.10 if regime == "Lucro Real" else 0.65
@@ -190,17 +260,14 @@ if arquivo_subido and taxa_cambio > 0:
         df['VLR_PIS_ITEM'] = df['VALOR_ADUANEIRO'] * (p_pis/100)
         df['VLR_COFINS_ITEM'] = df['VALOR_ADUANEIRO'] * (p_cof/100)
         df['VLR_IPI_ITEM'] = (df['VALOR_ADUANEIRO'] + df['VLR_II_ITEM']) * (df.get('ALIQ_IPI', 0)/100)
-        
         df['VALOR_PRODUTO_NF_ITEM'] = df['VALOR_ADUANEIRO'] + df['VLR_II_ITEM'] + df['VLR_PIS_ITEM'] + df['VLR_COFINS_ITEM']
         v_prod_composto = df['VALOR_PRODUTO_NF_ITEM'].sum()
         outras_desp_total = v_taxas + v_afrmm
         v_ipi_tot = df['VLR_IPI_ITEM'].sum()
-        
         base_icms_real = (v_prod_composto + outras_desp_total + v_ipi_tot) / (1 - (aliq_icms/100)) if aliq_icms > 0 else 0
         v_icms_cheio = base_icms_real * (aliq_icms/100)
         v_icms_diferido = v_icms_cheio * (perc_dif/100)
         v_icms_recolher = v_icms_cheio - v_icms_diferido
-
         df['BC_ICMS_ITEM'] = 0.00 if tem_dif == "Sim" else (df['VLR_PROD_TOTAL'] / total_merc_brl) * base_icms_real
         df['V_ICMS_ITEM'] = df['BC_ICMS_ITEM'] * (aliq_icms/100) if tem_dif == "Não" else 0.00
 
@@ -213,12 +280,12 @@ if arquivo_subido and taxa_cambio > 0:
             'v_total_nota': v_prod_composto + v_ipi_tot + outras_desp_total + (0 if tem_dif == "Sim" else v_icms_recolher)
         }
 
-        st.success("✅ Alinhamento restaurado e Tarja centralizada!")
-        col1, col2 = st.columns(2)
-        with col1:
+        st.success("✅ Alinhamento corrigido e Tarja centralizada!")
+        col_res1, col_res2 = st.columns(2)
+        with col_res1:
             buffer_xlsx = io.BytesIO()
             with pd.ExcelWriter(buffer_xlsx, engine='openpyxl') as writer: df.to_excel(writer, index=False)
-            st.download_button("📥 Baixar Excel", buffer_xlsx.getvalue(), "espelho_conferencia.xlsx")
-        with col2:
+            st.download_button("📥 Baixar Excel Auditado", buffer_xlsx.getvalue(), "espelho_conferencia.xlsx")
+        with col_res2:
             pdf_bytes = gerar_pdf(df, params_pdf)
-            st.download_button("📥 Baixar PDF (Final)", pdf_bytes, "danfe_arcanum.pdf", "application/pdf")
+            st.download_button("📥 Baixar PDF (Sentinela)", pdf_bytes, "danfe_arcanum.pdf", "application/pdf")
