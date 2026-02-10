@@ -3,7 +3,7 @@ import pandas as pd
 import io
 from fpdf import FPDF
 
-# 1. Configuração de Página: page_title="ALQUIMISTA", page_icon="⚙️", e layout="wide"
+# 1. Configuração de Página
 st.set_page_config(page_title="ALQUIMISTA", page_icon="⚙️", layout="wide")
 
 # 2. Paleta de Cores e Estilização CSS (Design Sentinela Dinâmico com Inputs Brancos)
@@ -44,18 +44,15 @@ st.markdown("""
         box-shadow: 0 4px 6px rgba(0,0,0,0.05);
     }
 
-    /* --- CORREÇÃO: CAMPOS DE PREENCHIMENTO EM BRANCO --- */
-    /* Força o fundo branco em inputs numéricos, seletores e áreas de texto */
-    .stNumberInput div[data-baseweb="input"], 
-    .stSelectbox div[data-baseweb="select"], 
-    .stTextInput div[data-baseweb="input"],
-    div[role="radiogroup"] {
+    /* --- CORREÇÃO DEFINITIVA: CAMPOS DE PREENCHIMENTO EM BRANCO --- */
+    /* Isso força o fundo branco em todos os containers de input e selects */
+    [data-baseweb="input"], [data-baseweb="select"], .stNumberInput input, .stSelectbox div {
         background-color: white !important;
+        background: white !important;
         border-radius: 12px !important;
-        border: 1px solid #E0E0E0 !important;
     }
 
-    /* Botões de Ação (Download e Modelo) em Rosa Vibrante */
+    /* Estilização dos Botões de Ação (Download e Modelo) */
     .stDownloadButton > button {
         background-color: #FF69B4 !important;
         color: white !important;
@@ -79,7 +76,6 @@ st.markdown("""
         padding: 20px !important;
     }
     
-    /* Botão 'Browse files' com texto em Rosa */
     [data-testid="stFileUploader"] button {
         color: #FF69B4 !important;
         background-color: white !important;
@@ -193,7 +189,7 @@ def gerar_pdf(df_final, params):
     pdf.multi_cell(190, 4, obs, 1)
     return bytes(pdf.output())
 
-# --- INTERFACE E ESTRUTURA (UI/UX) ---
+# --- ESTRUTURA VISUAL ---
 st.markdown("<h1>⚙️ ALQUIMISTA</h1>", unsafe_allow_html=True)
 
 container_topo = st.container()
@@ -204,9 +200,9 @@ with container_topo:
             <div class="instrucoes-card">
                 <h3>📖 Passo a Passo</h3>
                 <ol>
-                    <li>Preencha a taxa de câmbio e os custos logísticos nos campos brancos abaixo.</li>
-                    <li>Suba a planilha de itens no modelo Arcanum.</li>
-                    <li>Realize o download do PDF e Excel auditados.</li>
+                    <li>Configure as premissas de câmbio e logística abaixo.</li>
+                    <li>Suba sua planilha seguindo o modelo padrão.</li>
+                    <li>Aguarde o processamento e baixe seus arquivos auditados.</li>
                 </ol>
             </div>
         """, unsafe_allow_html=True)
@@ -224,7 +220,6 @@ with container_topo:
 
 st.markdown("---")
 
-# Inputs Organizadores com Fundo Branco
 col_cambio, col_log, col_fiscal = st.columns(3)
 with col_cambio:
     taxa_cambio = st.number_input("Taxa de Câmbio", min_value=0.0, value=0.0, format="%.4f")
@@ -239,18 +234,16 @@ with col_fiscal:
     tem_dif = st.radio("Diferimento?", ("Sim", "Não"), index=1, horizontal=True)
     perc_dif = st.number_input("Percentual Diferido (%)", min_value=0.0, value=0.0, step=0.1) if tem_dif == "Sim" else 0.0
 
-# Seção de Modelo e Upload
 col_mod, col_up = st.columns([1, 2])
 with col_mod:
     df_modelo = pd.DataFrame({'PRODUTO': ['ITEM'], 'NCM': ['0000.00.00'], 'QTD': [0], 'VLR_UNITARIO_MOEDA': [0.0], 'ALIQ_II': [0.0], 'ALIQ_IPI': [0.0]})
     buffer_mod = io.BytesIO()
     with pd.ExcelWriter(buffer_mod, engine='openpyxl') as writer: df_modelo.to_excel(writer, index=False)
     st.download_button(label="📥 Baixar Modelo Arcanum", data=buffer_mod.getvalue(), file_name="modelo_arcanum.xlsx")
-
 with col_up:
     arquivo_subido = st.file_uploader("Suba a planilha preenchida aqui", type=["xlsx"])
 
-# Lógica de Processamento (Preservada Integramente)
+# Lógica de Processamento
 if arquivo_subido and taxa_cambio > 0:
     df = pd.read_excel(arquivo_subido)
     df.columns = [c.upper().strip() for c in df.columns]
@@ -297,4 +290,4 @@ if arquivo_subido and taxa_cambio > 0:
             st.download_button("📥 Baixar Excel Auditado", buffer_xlsx.getvalue(), "espelho_conferencia.xlsx")
         with col_res2:
             pdf_bytes = gerar_pdf(df, params_pdf)
-            st.download_button("📥 Baixar PDF (Sentinela)", pdf_bytes, "danfe_arcanum.pdf", "application/pdf")
+            st.download_button("📥 Baixar PDF (Final)", pdf_bytes, "danfe_arcanum.pdf", "application/pdf")
