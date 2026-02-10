@@ -4,7 +4,7 @@ import io
 from fpdf import FPDF
 
 # 1. Configuração de Página
-st.set_page_config(page_title="ARCANO", page_icon="⚙️", layout="wide")
+st.set_page_config(page_title="ARCANO", page_icon="📦", layout="wide")
 
 # 2. Estilização CSS (Design Sentinela Dinâmico - AJUSTE DE TAMANHO COMPACTO)
 st.markdown("""
@@ -200,7 +200,7 @@ def gerar_pdf(df_final, params):
     return bytes(pdf.output())
 
 # --- INTERFACE ---
-st.markdown("<h1>⚙️ ARCANO</h1>", unsafe_allow_html=True)
+st.markdown("<h1>📦 ARCANO</h1>", unsafe_allow_html=True)
 
 container_topo = st.container()
 with container_topo:
