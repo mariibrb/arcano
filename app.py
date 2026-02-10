@@ -3,10 +3,10 @@ import pandas as pd
 import io
 from fpdf import FPDF
 
-# 1. Configuração de Página
-st.set_page_config(page_title="ARCANO", page_icon="⚙️", layout="wide")
+# 1. Configuração de Página: page_title="ALQUIMISTA", page_icon="⚙️", e layout="wide"
+st.set_page_config(page_title="ALQUIMISTA", page_icon="⚙️", layout="wide")
 
-# 2. Paleta de Cores e Estilização CSS Corrigida
+# 2. Paleta de Cores e Estilização CSS (Design Sentinela Dinâmico com Inputs Brancos)
 st.markdown("""
     <style>
     /* Importação de Fontes */
@@ -44,23 +44,18 @@ st.markdown("""
         box-shadow: 0 4px 6px rgba(0,0,0,0.05);
     }
 
-    /* Botões de Ação (Inputs e Selects) */
-    div.stButton > button:first-child {
-        border-radius: 15px;
-        background-color: white;
-        color: #6C757D;
-        font-family: 'Montserrat', sans-serif;
-        font-weight: 800;
-        border: none;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        transition: all 0.3s ease;
-    }
-    div.stButton > button:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 8px 12px rgba(0,0,0,0.15);
+    /* --- CORREÇÃO: CAMPOS DE PREENCHIMENTO EM BRANCO --- */
+    /* Força o fundo branco em inputs numéricos, seletores e áreas de texto */
+    .stNumberInput div[data-baseweb="input"], 
+    .stSelectbox div[data-baseweb="select"], 
+    .stTextInput div[data-baseweb="input"],
+    div[role="radiogroup"] {
+        background-color: white !important;
+        border-radius: 12px !important;
+        border: 1px solid #E0E0E0 !important;
     }
 
-    /* Botões de Download (Rosa Vibrante) */
+    /* Botões de Ação (Download e Modelo) em Rosa Vibrante */
     .stDownloadButton > button {
         background-color: #FF69B4 !important;
         color: white !important;
@@ -69,10 +64,14 @@ st.markdown("""
         font-family: 'Montserrat', sans-serif !important;
         font-weight: 800 !important;
         box-shadow: 0 0 15px rgba(255, 105, 180, 0.4) !important;
+        transition: all 0.3s ease;
+    }
+    .stDownloadButton > button:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(255, 105, 180, 0.6) !important;
     }
 
-    /* --- CORREÇÃO DO FILE UPLOADER --- */
-    /* Fundo Branco e Borda Tracejada Rosa */
+    /* FILE UPLOADER: Fundo Branco e Borda Tracejada Rosa */
     [data-testid="stFileUploader"] section {
         background-color: white !important;
         border: 2px dashed #FF69B4 !important;
@@ -86,11 +85,8 @@ st.markdown("""
         background-color: white !important;
         border: 1px solid #FF69B4 !important;
         border-radius: 10px !important;
-    }
-    
-    /* Texto de suporte dentro do uploader */
-    [data-testid="stFileUploader"] label, [data-testid="stFileUploader"] div {
-        color: #6C757D !important;
+        font-family: 'Montserrat', sans-serif !important;
+        font-weight: 800 !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -198,7 +194,7 @@ def gerar_pdf(df_final, params):
     return bytes(pdf.output())
 
 # --- INTERFACE E ESTRUTURA (UI/UX) ---
-st.markdown("<h1>⚙️ ARCANO</h1>", unsafe_allow_html=True)
+st.markdown("<h1>⚙️ ALQUIMISTA</h1>", unsafe_allow_html=True)
 
 container_topo = st.container()
 with container_topo:
@@ -208,7 +204,7 @@ with container_topo:
             <div class="instrucoes-card">
                 <h3>📖 Passo a Passo</h3>
                 <ol>
-                    <li>Preencha a taxa de câmbio e os custos logísticos.</li>
+                    <li>Preencha a taxa de câmbio e os custos logísticos nos campos brancos abaixo.</li>
                     <li>Suba a planilha de itens no modelo Arcanum.</li>
                     <li>Realize o download do PDF e Excel auditados.</li>
                 </ol>
@@ -221,14 +217,14 @@ with container_topo:
                 <ul>
                     <li>Cálculo automático de Valor Aduaneiro (CIF).</li>
                     <li>Rateio proporcional de frete e seguro por item.</li>
-                    <li>Espelho DANFE com tarja de segurança.</li>
+                    <li>Espelho DANFE com tarja de segurança centralizada.</li>
                 </ul>
             </div>
         """, unsafe_allow_html=True)
 
 st.markdown("---")
 
-# Inputs Organizadores
+# Inputs Organizadores com Fundo Branco
 col_cambio, col_log, col_fiscal = st.columns(3)
 with col_cambio:
     taxa_cambio = st.number_input("Taxa de Câmbio", min_value=0.0, value=0.0, format="%.4f")
@@ -293,7 +289,7 @@ if arquivo_subido and taxa_cambio > 0:
             'v_total_nota': v_prod_composto + v_ipi_tot + outras_desp_total + (0 if tem_dif == "Sim" else v_icms_recolher)
         }
 
-        st.success("✅ Alinhamento corrigido e Tarja centralizada!")
+        st.success("✅ Auditoria realizada com sucesso!")
         col_res1, col_res2 = st.columns(2)
         with col_res1:
             buffer_xlsx = io.BytesIO()
