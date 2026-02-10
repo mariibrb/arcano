@@ -3,10 +3,10 @@ import pandas as pd
 import io
 from fpdf import FPDF
 
-# 1. Configuração de Página
+# 1. Configuração de Página: page_title="ALQUIMISTA", page_icon="⚙️", e layout="wide"
 st.set_page_config(page_title="ALQUIMISTA", page_icon="⚙️", layout="wide")
 
-# 2. Paleta de Cores e Estilização CSS (Design Sentinela Dinâmico com Inputs Brancos)
+# 2. Paleta de Cores e Estilização CSS (Design Sentinela Dinâmico Total)
 st.markdown("""
     <style>
     /* Importação de Fontes */
@@ -14,7 +14,7 @@ st.markdown("""
 
     /* Fundo em degradê radial */
     .stApp {
-        background: radial-gradient(circle at top right, #FFDEEF 0%, #F8F9FA 100%);
+        background: radial-gradient(circle at top right, #FFDEEF 0%, #F8F9FA 100%) !important;
     }
 
     /* Remover header padrão do Streamlit */
@@ -29,7 +29,7 @@ st.markdown("""
     h1 {
         font-family: 'Montserrat', sans-serif;
         font-weight: 800;
-        color: #FF69B4;
+        color: #FF69B4 !important;
         text-align: center;
         margin-bottom: 30px;
     }
@@ -44,45 +44,51 @@ st.markdown("""
         box-shadow: 0 4px 6px rgba(0,0,0,0.05);
     }
 
-    /* --- CORREÇÃO DEFINITIVA: CAMPOS DE PREENCHIMENTO EM BRANCO --- */
-    /* Isso força o fundo branco em todos os containers de input e selects */
+    /* Campos de Preenchimento (Inputs) com Fundo Branco */
     [data-baseweb="input"], [data-baseweb="select"], .stNumberInput input, .stSelectbox div {
         background-color: white !important;
         background: white !important;
         border-radius: 12px !important;
     }
 
-    /* Estilização dos Botões de Ação (Download e Modelo) */
+    /* --- ESTILIZAÇÃO DOS BOTÕES (UPLOAD E DOWNLOAD IGUAIS) --- */
+    /* Captura o botão interno do File Uploader e os botões de Download */
+    [data-testid="stFileUploader"] section button, 
     .stDownloadButton > button {
-        background-color: #FF69B4 !important;
-        color: white !important;
-        border: 3px solid white !important;
-        border-radius: 20px !important;
+        background-color: #FF69B4 !important; 
+        color: white !important; 
+        border: 3px solid #FFFFFF !important;
         font-family: 'Montserrat', sans-serif !important;
-        font-weight: 800 !important;
+        font-weight: 700 !important;
+        border-radius: 15px !important;
         box-shadow: 0 0 15px rgba(255, 105, 180, 0.4) !important;
-        transition: all 0.3s ease;
-    }
-    .stDownloadButton > button:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 8px 20px rgba(255, 105, 180, 0.6) !important;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+        text-transform: uppercase;
     }
 
-    /* FILE UPLOADER: Fundo Branco e Borda Tracejada Rosa */
-    [data-testid="stFileUploader"] section {
-        background-color: white !important;
-        border: 2px dashed #FF69B4 !important;
-        border-radius: 20px !important;
-        padding: 20px !important;
+    [data-testid="stFileUploader"] section button:hover, 
+    .stDownloadButton > button:hover {
+        transform: translateY(-5px) !important;
+        box-shadow: 0 10px 20px rgba(255, 105, 180, 0.6) !important;
     }
-    
-    [data-testid="stFileUploader"] button {
-        color: #FF69B4 !important;
-        background-color: white !important;
-        border: 1px solid #FF69B4 !important;
-        border-radius: 10px !important;
-        font-family: 'Montserrat', sans-serif !important;
-        font-weight: 800 !important;
+
+    /* Container do File Uploader */
+    [data-testid="stFileUploader"] { 
+        border: 2px dashed #FF69B4 !important; 
+        border-radius: 20px !important;
+        background: #FFFFFF !important;
+        padding: 30px !important;
+    }
+
+    /* Botões de Ação Menores (Inputs de seleção lateral se houver) */
+    div.stButton > button:not([data-testid="stDownloadButton"]) {
+        border-radius: 15px;
+        background-color: white;
+        color: #6C757D;
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 800;
+        border: 1px solid #DEE2E6;
+        transition: all 0.3s ease;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -200,9 +206,9 @@ with container_topo:
             <div class="instrucoes-card">
                 <h3>📖 Passo a Passo</h3>
                 <ol>
-                    <li>Configure as premissas de câmbio e logística abaixo.</li>
-                    <li>Suba sua planilha seguindo o modelo padrão.</li>
-                    <li>Aguarde o processamento e baixe seus arquivos auditados.</li>
+                    <li>Preencha a taxa de câmbio e os custos logísticos nos campos brancos.</li>
+                    <li>Suba a planilha de itens no modelo Arcanum.</li>
+                    <li>Realize o download do PDF e Excel auditados.</li>
                 </ol>
             </div>
         """, unsafe_allow_html=True)
@@ -290,4 +296,4 @@ if arquivo_subido and taxa_cambio > 0:
             st.download_button("📥 Baixar Excel Auditado", buffer_xlsx.getvalue(), "espelho_conferencia.xlsx")
         with col_res2:
             pdf_bytes = gerar_pdf(df, params_pdf)
-            st.download_button("📥 Baixar PDF (Final)", pdf_bytes, "danfe_arcanum.pdf", "application/pdf")
+            st.download_button("📥 Baixar PDF (Sentinela)", pdf_bytes, "danfe_arcanum.pdf", "application/pdf")
