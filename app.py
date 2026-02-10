@@ -61,7 +61,7 @@ st.markdown("""
         color: white !important; 
         border: 3px solid #FFFFFF !important;
         font-family: 'Montserrat', sans-serif !important;
-        font-weight: 700 !important;
+        font-weight: 800 !important;
         border-radius: 15px !important;
         box-shadow: 0 0 15px rgba(255, 105, 180, 0.4) !important;
         text-transform: none !important; /* TEXTO AO NATURAL COMO NO EXEMPLO */
