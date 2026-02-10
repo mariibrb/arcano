@@ -198,7 +198,7 @@ def gerar_pdf(df_final, params):
     return bytes(pdf.output())
 
 # --- INTERFACE E ESTRUTURA (UI/UX) ---
-st.markdown("<h1>⚙️ ALQUIMISTA</h1>", unsafe_allow_html=True)
+st.markdown("<h1>⚙️ ARCANO</h1>", unsafe_allow_html=True)
 
 container_topo = st.container()
 with container_topo:
