@@ -3,10 +3,10 @@ import pandas as pd
 import io
 from fpdf import FPDF
 
-# 1. Configuração de Página: page_title="ARCANO", page_icon="⚙️", e layout="wide"
+# 1. Configuração de Página
 st.set_page_config(page_title="ARCANO", page_icon="⚙️", layout="wide")
 
-# 2. Estilização CSS (Ajuste Cirúrgico no Botão de Upload)
+# 2. Estilização CSS (Design Sentinela Dinâmico - AJUSTE DE TAMANHO COMPACTO)
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;800&family=Plus+Jakarta+Sans:wght@400;700&display=swap');
@@ -40,11 +40,6 @@ st.markdown("""
         border-left: 5px solid #FF69B4;
         margin-bottom: 20px;
     }
-    
-    .instrucoes-card h3 {
-        font-weight: 800 !important;
-        margin-top: 0;
-    }
 
     /* CAMPOS DE PREENCHIMENTO EM BRANCO */
     [data-baseweb="input"], [data-baseweb="select"], .stNumberInput input, div[role="radiogroup"], .stSelectbox div {
@@ -52,25 +47,26 @@ st.markdown("""
         border-radius: 12px !important;
     }
 
-    /* 2. ZONA DE UPLOAD IDENTICA AO MODELO */
+    /* 2. ZONA DE UPLOAD IDENTICA AO MODELO (AJUSTE DE PONTILHADO) */
     [data-testid="stFileUploader"] { 
         border: 2px dashed #FF69B4 !important; 
         border-radius: 20px !important;
         background: #FFFFFF !important;
-        padding: 30px !important;
+        padding: 20px !important; /* Padding reduzido para ficar menor */
     }
 
-    /* --- O BOTÃO DE UPLOAD ESPECÍFICO --- */
-    [data-testid="stFileUploader"] button {
+    /* BOTÃO BROWSE FILES (Rosa Sólido, Montserrat 800, TAMANHO PEQUENO) */
+    [data-testid="stFileUploader"] section button {
         background-color: #FF69B4 !important; 
         color: white !important; 
-        border: 3px solid #FFFFFF !important;
+        border: 2px solid #FFFFFF !important;
         font-family: 'Montserrat', sans-serif !important;
         font-weight: 800 !important; 
-        font-size: 1.1rem !important; /* Tamanho da letra maior */
-        border-radius: 15px !important;
-        box-shadow: 0 0 15px rgba(255, 105, 180, 0.4) !important;
-        text-transform: none !important; /* APENAS A PRIMEIRA MAIÚSCULA */
+        font-size: 0.8rem !important; /* LETRA BEM MENOR */
+        border-radius: 12px !important;
+        box-shadow: 0 0 10px rgba(255, 105, 180, 0.3) !important;
+        text-transform: none !important; 
+        padding: 5px 15px !important; /* Botão mais slim */
     }
 
     /* BOTÕES DE DOWNLOAD */
@@ -78,16 +74,16 @@ st.markdown("""
         background-color: #FF69B4 !important; 
         color: white !important; 
         border: 3px solid #FFFFFF !important;
-        font-family: 'Montserrat', sans-serif !important;
         font-weight: 800 !important;
+        font-size: 0.9rem !important;
         border-radius: 15px !important;
         box-shadow: 0 0 15px rgba(255, 105, 180, 0.4) !important;
         text-transform: uppercase;
     }
 
-    div.stDownloadButton > button:hover, [data-testid="stFileUploader"] button:hover {
-        transform: translateY(-5px) !important;
-        box-shadow: 0 10px 20px rgba(255, 105, 180, 0.6) !important;
+    div.stDownloadButton > button:hover, [data-testid="stFileUploader"] section button:hover {
+        transform: translateY(-3px) !important;
+        box-shadow: 0 8px 15px rgba(255, 105, 180, 0.5) !important;
     }
 
     /* Botões de Ação Menores */
@@ -214,9 +210,9 @@ with container_topo:
             <div class="instrucoes-card">
                 <h3>📖 Passo a Passo</h3>
                 <ol>
-                    <li>Preencha a taxa de câmbio e os custos logísticos nos campos brancos.</li>
-                    <li>Suba a planilha de itens no modelo Arcanum.</li>
-                    <li>Realize o download do PDF e Excel auditados.</li>
+                    <li>Preencha as premissas cambiais e logísticas.</li>
+                    <li>Suba a planilha de itens no modelo.</li>
+                    <li>Baixe os arquivos auditados.</li>
                 </ol>
             </div>
         """, unsafe_allow_html=True)
@@ -225,9 +221,9 @@ with container_topo:
             <div class="instrucoes-card">
                 <h3>📊 O que será obtido?</h3>
                 <ul>
-                    <li>Cálculo automático de Valor Aduaneiro (CIF).</li>
-                    <li>Rateio proporcional de frete e seguro por item.</li>
-                    <li>Espelho DANFE com tarja de segurança centralizada.</li>
+                    <li>Cálculo de Valor Aduaneiro.</li>
+                    <li>Rateio proporcional por item.</li>
+                    <li>Espelho DANFE com tarja centralizada.</li>
                 </ul>
             </div>
         """, unsafe_allow_html=True)
@@ -297,7 +293,7 @@ if arquivo_subido and taxa_cambio > 0:
             'v_total_nota': v_prod_composto + v_ipi_tot + outras_desp_total + (0 if tem_dif == "Sim" else v_icms_recolher)
         }
 
-        st.success("✅ Auditoria restaurada com fonte Montserrat 800!")
+        st.success("✅ Auditoria realizada com sucesso!")
         col_res1, col_res2 = st.columns(2)
         with col_res1:
             buffer_xlsx = io.BytesIO()
