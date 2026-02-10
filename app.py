@@ -6,7 +6,7 @@ from fpdf import FPDF
 # 1. Configuração de Página: page_title="ARCANO", page_icon="⚙️", e layout="wide"
 st.set_page_config(page_title="ARCANO", page_icon="⚙️", layout="wide")
 
-# 2. Estilização CSS (Design Sentinela Dinâmico com FONTE E UPLOAD IDÊNTICOS)
+# 2. Estilização CSS (CÓPIA FIEL DO PADRÃO VISUAL SOLICITADO)
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;800&family=Plus+Jakarta+Sans:wght@400;700&display=swap');
@@ -15,14 +15,14 @@ st.markdown("""
     header, [data-testid="stHeader"] { display: none !important; }
     .stDeployButton {display:none !important;}
     
-    /* APLICAÇÃO GLOBAL DA FONTE MONTSERRAT 800 */
-    html, body, [class*="css"], .stMarkdown, h1, h2, h3, p, li, label, input, button {
-        font-family: 'Montserrat', sans-serif !important;
-    }
-
     /* Fundo em degradê radial */
     .stApp { 
         background: radial-gradient(circle at top right, #FFDEEF 0%, #F8F9FA 100%) !important; 
+    }
+
+    /* APLICAÇÃO GLOBAL DA FONTE MONTSERRAT 800 */
+    html, body, [class*="css"], .stMarkdown, h1, h2, h3, p, li, label, input, button {
+        font-family: 'Montserrat', sans-serif !important;
     }
 
     h1 { 
@@ -40,11 +40,6 @@ st.markdown("""
         border-left: 5px solid #FF69B4;
         margin-bottom: 20px;
     }
-    
-    .instrucoes-card h3 {
-        font-weight: 800 !important;
-        margin-top: 0;
-    }
 
     /* CAMPOS DE PREENCHIMENTO EM BRANCO */
     [data-baseweb="input"], [data-baseweb="select"], .stNumberInput input, div[role="radiogroup"], .stSelectbox div {
@@ -52,37 +47,35 @@ st.markdown("""
         border-radius: 12px !important;
     }
 
-    /* 2. ZONA DE UPLOAD IDÊNTICA AO MODELO (PONTILHADO GROSSO E FUNDO BRANCO) */
+    /* 2. ZONA DE UPLOAD IDENTICA AO MODELO */
     [data-testid="stFileUploader"] { 
-        border: 5px dashed #FF69B4 !important; /* Pontilhado Grosso de 5px */
+        border: 2px dashed #FF69B4 !important; 
         border-radius: 20px !important;
         background: #FFFFFF !important;
         padding: 30px !important;
     }
 
-    /* BOTÃO BROWSE FILES (Rosa Sólido com Montserrat 800 e Letras ao Natural) */
+    /* BOTÃO BROWSE FILES (Rosa Sólido com Montserrat 800 - SEM UPPERCASE) */
     [data-testid="stFileUploader"] section button {
         background-color: #FF69B4 !important; 
         color: white !important; 
         border: 3px solid #FFFFFF !important;
         font-family: 'Montserrat', sans-serif !important;
-        font-weight: 800 !important; /* Letra gordinha e bonita */
+        font-weight: 700 !important;
         border-radius: 15px !important;
         box-shadow: 0 0 15px rgba(255, 105, 180, 0.4) !important;
-        text-transform: none !important; /* Remove o excesso de maiúsculas */
+        text-transform: none !important; /* TEXTO AO NATURAL COMO NO EXEMPLO */
     }
 
-    /* BOTÕES DE DOWNLOAD (Mantendo padrão rosa vibrante) */
+    /* BOTÕES DE DOWNLOAD */
     div.stDownloadButton > button {
         background-color: #FF69B4 !important; 
         color: white !important; 
         border: 3px solid #FFFFFF !important;
-        font-family: 'Montserrat', sans-serif !important;
-        font-weight: 800 !important;
+        font-weight: 700 !important;
         border-radius: 15px !important;
         box-shadow: 0 0 15px rgba(255, 105, 180, 0.4) !important;
         text-transform: uppercase;
-        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
     }
 
     div.stDownloadButton > button:hover, [data-testid="stFileUploader"] section button:hover {
@@ -90,7 +83,7 @@ st.markdown("""
         box-shadow: 0 10px 20px rgba(255, 105, 180, 0.6) !important;
     }
 
-    /* Botões de Ação Menores (inputs laterais) */
+    /* Botões de Ação Menores */
     div.stButton > button:not([data-testid="stDownloadButton"]) {
         border-radius: 15px;
         background-color: white;
