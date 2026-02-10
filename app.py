@@ -4,7 +4,7 @@ import io
 from fpdf import FPDF
 
 # 1. Configuração de Página
-st.set_page_config(page_title="ALQUIMISTA", page_icon="⚙️", layout="wide")
+st.set_page_config(page_title="ARCANO", page_icon="⚙️", layout="wide")
 
 # 2. Paleta de Cores e Estilização CSS Corrigida
 st.markdown("""
