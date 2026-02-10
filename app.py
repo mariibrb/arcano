@@ -61,7 +61,7 @@ st.markdown("""
         padding: 30px !important;
     }
 
-    /* BOTÃO BROWSE FILES (Rosa Sólido com Montserrat 800) */
+    /* BOTÃO Browse files (Rosa Sólido com Montserrat 800) */
     [data-testid="stFileUploader"] section button {
         background-color: #FF69B4 !important; 
         color: white !important; 
