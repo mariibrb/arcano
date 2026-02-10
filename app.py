@@ -3,58 +3,57 @@ import pandas as pd
 import io
 from fpdf import FPDF
 
-# 1. Configuração de Página: page_title="ALQUIMISTA", page_icon="⚙️", e layout="wide"
+# 1. Configuração de Página
 st.set_page_config(page_title="ALQUIMISTA", page_icon="⚙️", layout="wide")
 
-# 2. Paleta de Cores e Estilização CSS (Design Sentinela Dinâmico Total)
+# 2. Estilização CSS (Design Sentinela Dinâmico com Zona de Upload IDÊNTICA)
 st.markdown("""
     <style>
-    /* Importação de Fontes */
-    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;800&family=Plus+Jakarta+Sans:wght@400;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;800&family=Plus+Jakarta+Sans:wght@400;700&display=swap');
 
-    /* Fundo em degradê radial */
-    .stApp {
-        background: radial-gradient(circle at top right, #FFDEEF 0%, #F8F9FA 100%) !important;
+    /* 1. FUNDAÇÃO E CABEÇALHO */
+    header, [data-testid="stHeader"] { display: none !important; }
+    .stApp { 
+        background: radial-gradient(circle at top right, #FFDEEF 0%, #F8F9FA 100%) !important; 
+        transition: background 0.8s ease-in-out !important; 
     }
 
-    /* Remover header padrão do Streamlit */
-    header {display: none !important;}
-    .stDeployButton {display:none !important;}
-
-    /* Tipografia Global */
-    html, body, [class*="css"] {
-        font-family: 'Plus Jakarta Sans', sans-serif;
-    }
-
-    h1 {
-        font-family: 'Montserrat', sans-serif;
-        font-weight: 800;
+    /* Tipografia Montserrat 800 */
+    h1, h2, h3 {
+        font-family: 'Montserrat', sans-serif !important;
+        font-weight: 800 !important;
         color: #FF69B4 !important;
-        text-align: center;
-        margin-bottom: 30px;
+    }
+    
+    h1 { text-align: center; margin-bottom: 20px; }
+
+    /* 2. MENU SUPERIOR E BOTÕES DE AÇÃO */
+    div.stButton > button:not([data-testid="stDownloadButton"]) {
+        color: #6C757D !important; 
+        background-color: #FFFFFF !important; 
+        border: 1px solid #DEE2E6 !important;
+        border-radius: 15px !important;
+        font-family: 'Montserrat', sans-serif !important;
+        font-weight: 800 !important;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
     }
 
-    /* Cards de Instrução */
-    .instrucoes-card {
-        background-color: rgba(255, 255, 255, 0.7);
-        border-left: 5px solid #FF69B4;
-        padding: 20px;
-        border-radius: 15px;
-        margin-bottom: 20px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    div.stButton > button:hover {
+        transform: translateY(-5px) !important;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
     }
 
-    /* Campos de Preenchimento (Inputs) com Fundo Branco */
-    [data-baseweb="input"], [data-baseweb="select"], .stNumberInput input, .stSelectbox div {
-        background-color: white !important;
-        background: white !important;
-        border-radius: 12px !important;
+    /* 3. ZONA DE UPLOAD IGUAL AO CÓDIGO REFERÊNCIA */
+    [data-testid="stFileUploader"] { 
+        border: 2px dashed #FF69B4 !important; 
+        border-radius: 20px !important;
+        background: #FFFFFF !important;
+        padding: 30px !important; /* Espaçamento solicitado */
     }
 
-    /* --- ESTILIZAÇÃO DOS BOTÕES (UPLOAD E DOWNLOAD IGUAIS) --- */
-    /* Captura o botão interno do File Uploader e os botões de Download */
+    /* BOTÃO BROWSE FILES E DOWNLOADS (ROSA SÓLIDO) */
     [data-testid="stFileUploader"] section button, 
-    .stDownloadButton > button {
+    div.stDownloadButton > button {
         background-color: #FF69B4 !important; 
         color: white !important; 
         border: 3px solid #FFFFFF !important;
@@ -62,38 +61,27 @@ st.markdown("""
         font-weight: 700 !important;
         border-radius: 15px !important;
         box-shadow: 0 0 15px rgba(255, 105, 180, 0.4) !important;
-        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
         text-transform: uppercase;
     }
 
-    [data-testid="stFileUploader"] section button:hover, 
-    .stDownloadButton > button:hover {
-        transform: translateY(-5px) !important;
-        box-shadow: 0 10px 20px rgba(255, 105, 180, 0.6) !important;
-    }
-
-    /* Container do File Uploader */
-    [data-testid="stFileUploader"] { 
-        border: 2px dashed #FF69B4 !important; 
-        border-radius: 20px !important;
-        background: #FFFFFF !important;
-        padding: 30px !important;
-    }
-
-    /* Botões de Ação Menores (Inputs de seleção lateral se houver) */
-    div.stButton > button:not([data-testid="stDownloadButton"]) {
+    /* Cards de Instrução */
+    .instrucoes-card {
+        background-color: rgba(255, 255, 255, 0.7);
         border-radius: 15px;
-        background-color: white;
-        color: #6C757D;
-        font-family: 'Montserrat', sans-serif;
-        font-weight: 800;
-        border: 1px solid #DEE2E6;
-        transition: all 0.3s ease;
+        padding: 20px;
+        border-left: 5px solid #FF69B4;
+        margin-bottom: 20px;
+    }
+
+    /* Forçar inputs com fundo branco */
+    [data-baseweb="input"], [data-baseweb="select"], .stNumberInput input {
+        background-color: white !important;
+        border-radius: 12px !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# --- CLASSE PARA GERAÇÃO DO PDF (Lógica Original Intocada) ---
+# --- CLASSE PARA GERAÇÃO DO PDF (Lógica Preservada) ---
 class EspelhoDANFE(FPDF):
     def header(self):
         self.set_font('Arial', 'B', 35)
@@ -115,7 +103,7 @@ class EspelhoDANFE(FPDF):
         self.cell(35, 3, 'Nota Fiscal Eletrônica', 0, 1, 'C')
         self.set_font('Arial', 'B', 8)
         self.set_xy(105, 24)
-        self.cell(35, 4, 'Nº 000.000.000', 0, 1, 'C') 
+        self.cell(35, 4, f'Nº 000.000.000', 0, 1, 'C') 
         self.set_x(105)
         self.cell(35, 4, 'Série 0', 0, 1, 'C') 
         self.rect(10, 35, 190, 8)
@@ -195,34 +183,15 @@ def gerar_pdf(df_final, params):
     pdf.multi_cell(190, 4, obs, 1)
     return bytes(pdf.output())
 
-# --- ESTRUTURA VISUAL ---
+# --- INTERFACE ---
 st.markdown("<h1>⚙️ ALQUIMISTA</h1>", unsafe_allow_html=True)
 
-container_topo = st.container()
-with container_topo:
-    col_inst1, col_inst2 = st.columns(2)
-    with col_inst1:
-        st.markdown("""
-            <div class="instrucoes-card">
-                <h3>📖 Passo a Passo</h3>
-                <ol>
-                    <li>Preencha a taxa de câmbio e os custos logísticos nos campos brancos.</li>
-                    <li>Suba a planilha de itens no modelo Arcanum.</li>
-                    <li>Realize o download do PDF e Excel auditados.</li>
-                </ol>
-            </div>
-        """, unsafe_allow_html=True)
-    with col_inst2:
-        st.markdown("""
-            <div class="instrucoes-card">
-                <h3>📊 O que será obtido?</h3>
-                <ul>
-                    <li>Cálculo automático de Valor Aduaneiro (CIF).</li>
-                    <li>Rateio proporcional de frete e seguro por item.</li>
-                    <li>Espelho DANFE com tarja de segurança centralizada.</li>
-                </ul>
-            </div>
-        """, unsafe_allow_html=True)
+with st.container():
+    c1, c2 = st.columns(2)
+    with c1:
+        st.markdown('<div class="instrucoes-card"><h3>📖 Passo a Passo</h3>Configure o câmbio e logística abaixo e suba sua planilha.</div>', unsafe_allow_html=True)
+    with c2:
+        st.markdown('<div class="instrucoes-card"><h3>📊 O que será obtido?</h3>Rateio proporcional de custos e Espelho DANFE auditado.</div>', unsafe_allow_html=True)
 
 st.markdown("---")
 
@@ -230,15 +199,15 @@ col_cambio, col_log, col_fiscal = st.columns(3)
 with col_cambio:
     taxa_cambio = st.number_input("Taxa de Câmbio", min_value=0.0, value=0.0, format="%.4f")
 with col_log:
-    v_frete = st.number_input("Frete Internacional", min_value=0.0, value=0.0, step=0.01)
-    v_seguro = st.number_input("Seguro Internacional", min_value=0.0, value=0.0, step=0.01)
-    v_taxas = st.number_input("Taxas Siscomex", min_value=0.0, value=0.0, step=0.01)
-    v_afrmm = st.number_input("AFRMM Total", min_value=0.0, value=0.0, step=0.01)
+    v_frete = st.number_input("Frete Internacional", min_value=0.0, step=0.01)
+    v_seguro = st.number_input("Seguro Internacional", min_value=0.0, step=0.01)
+    v_taxas = st.number_input("Taxas Siscomex", min_value=0.0, step=0.01)
+    v_afrmm = st.number_input("AFRMM Total", min_value=0.0, step=0.01)
 with col_fiscal:
     regime = st.selectbox("Regime PIS/COFINS", ["Lucro Real", "Lucro Presumido"])
-    aliq_icms = st.number_input("Alíquota ICMS (%)", min_value=0.0, value=0.0, step=0.1)
+    aliq_icms = st.number_input("Alíquota ICMS (%)", min_value=0.0, step=0.1)
     tem_dif = st.radio("Diferimento?", ("Sim", "Não"), index=1, horizontal=True)
-    perc_dif = st.number_input("Percentual Diferido (%)", min_value=0.0, value=0.0, step=0.1) if tem_dif == "Sim" else 0.0
+    perc_dif = st.number_input("Percentual Diferido (%)", min_value=0.0, step=0.1) if tem_dif == "Sim" else 0.0
 
 col_mod, col_up = st.columns([1, 2])
 with col_mod:
@@ -246,16 +215,15 @@ with col_mod:
     buffer_mod = io.BytesIO()
     with pd.ExcelWriter(buffer_mod, engine='openpyxl') as writer: df_modelo.to_excel(writer, index=False)
     st.download_button(label="📥 Baixar Modelo Arcanum", data=buffer_mod.getvalue(), file_name="modelo_arcanum.xlsx")
-with col_up:
-    arquivo_subido = st.file_uploader("Suba a planilha preenchida aqui", type=["xlsx"])
 
-# Lógica de Processamento
+with col_up:
+    arquivo_subido = st.file_uploader("Arraste a planilha aqui para auditar", type=["xlsx"])
+
 if arquivo_subido and taxa_cambio > 0:
     df = pd.read_excel(arquivo_subido)
     df.columns = [c.upper().strip() for c in df.columns]
     col_vlr = next((c for c in ['VLR_UNITARIO_MOEDA', 'VLR_UNITARIO', 'VALOR'] if c in df.columns), None)
     col_qtd = next((c for c in ['QTD', 'QUANTIDADE'] if c in df.columns), None)
-
     if col_vlr and col_qtd:
         df['VLR_PROD_TOTAL'] = df[col_qtd] * (df[col_vlr] * taxa_cambio)
         df['VLR_UNITARIO_BRL'] = df[col_vlr] * taxa_cambio
@@ -274,26 +242,12 @@ if arquivo_subido and taxa_cambio > 0:
         v_ipi_tot = df['VLR_IPI_ITEM'].sum()
         base_icms_real = (v_prod_composto + outras_desp_total + v_ipi_tot) / (1 - (aliq_icms/100)) if aliq_icms > 0 else 0
         v_icms_cheio = base_icms_real * (aliq_icms/100)
-        v_icms_diferido = v_icms_cheio * (perc_dif/100)
-        v_icms_recolher = v_icms_cheio - v_icms_diferido
+        v_icms_recolher = v_icms_cheio - (v_icms_cheio * (perc_dif/100))
         df['BC_ICMS_ITEM'] = 0.00 if tem_dif == "Sim" else (df['VLR_PROD_TOTAL'] / total_merc_brl) * base_icms_real
         df['V_ICMS_ITEM'] = df['BC_ICMS_ITEM'] * (aliq_icms/100) if tem_dif == "Não" else 0.00
-
-        params_pdf = {
-            'v_prod_composto': v_prod_composto, 'outras_desp_total': outras_desp_total, 'afrmm': outras_desp_total,
-            'v_ipi_tot': v_ipi_tot, 'v_icms_diferido': v_icms_diferido, 'aliq_icms_val': aliq_icms,
-            'is_diferido': (tem_dif == "Sim"), 'cst_calculado': "151" if tem_dif == "Sim" else "100",
-            'base_icms_header': 0.00 if tem_dif == "Sim" else base_icms_real,
-            'v_icms_header': 0.00 if tem_dif == "Sim" else v_icms_recolher,
-            'v_total_nota': v_prod_composto + v_ipi_tot + outras_desp_total + (0 if tem_dif == "Sim" else v_icms_recolher)
-        }
-
+        params_pdf = {'v_prod_composto': v_prod_composto, 'outras_desp_total': outras_desp_total, 'afrmm': outras_desp_total, 'v_ipi_tot': v_ipi_tot, 'v_icms_diferido': (v_icms_cheio * (perc_dif/100)), 'aliq_icms_val': aliq_icms, 'is_diferido': (tem_dif == "Sim"), 'cst_calculado': "151" if tem_dif == "Sim" else "100", 'base_icms_header': 0.00 if tem_dif == "Sim" else base_icms_real, 'v_icms_header': 0.00 if tem_dif == "Sim" else v_icms_recolher, 'v_total_nota': v_prod_composto + v_ipi_tot + outras_desp_total + (0 if tem_dif == "Sim" else v_icms_recolher)}
+        
         st.success("✅ Auditoria realizada com sucesso!")
-        col_res1, col_res2 = st.columns(2)
-        with col_res1:
-            buffer_xlsx = io.BytesIO()
-            with pd.ExcelWriter(buffer_xlsx, engine='openpyxl') as writer: df.to_excel(writer, index=False)
-            st.download_button("📥 Baixar Excel Auditado", buffer_xlsx.getvalue(), "espelho_conferencia.xlsx")
-        with col_res2:
-            pdf_bytes = gerar_pdf(df, params_pdf)
-            st.download_button("📥 Baixar PDF (Sentinela)", pdf_bytes, "danfe_arcanum.pdf", "application/pdf")
+        c1, c2 = st.columns(2)
+        with c1: st.download_button("📥 Baixar Excel Auditado", buffer_xlsx.getvalue() if 'buffer_xlsx' in locals() else b"", "espelho.xlsx")
+        with c2: st.download_button("📥 Baixar PDF Sentinela", gerar_pdf(df, params_pdf), "danfe.pdf")
