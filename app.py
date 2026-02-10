@@ -4,7 +4,7 @@ import io
 from fpdf import FPDF
 
 # Configuração Básica - Projeto Sentinela
-st.set_page_config(page_title="ARCANUM - Auditoria de Importação", layout="wide")
+st.set_page_config(page_title="ARCANO", layout="wide")
 
 # --- CLASSE PARA GERAÇÃO DO PDF (REPLICA DO MODELO 607 COM TUDO AJUSTADO) ---
 class EspelhoDANFE(FPDF):
