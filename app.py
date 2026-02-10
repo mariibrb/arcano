@@ -20,14 +20,13 @@ st.markdown("""
         background: radial-gradient(circle at top right, #FFDEEF 0%, #F8F9FA 100%) !important; 
     }
 
-    /* APLICAÇÃO GLOBAL DA FONTE MONTSERRAT 800 COM TAMANHO AJUSTADO */
+    /* APLICAÇÃO GLOBAL DA FONTE MONTSERRAT 800 */
     html, body, [class*="css"], .stMarkdown, h1, h2, h3, p, li, label, input, button {
         font-family: 'Montserrat', sans-serif !important;
-        font-weight: 800 !important;
     }
 
     h1 { 
-        font-size: 3rem !important;
+        font-weight: 800 !important;
         color: #FF69B4 !important; 
         text-align: center; 
         margin-bottom: 20px; 
@@ -48,32 +47,24 @@ st.markdown("""
         border-radius: 12px !important;
     }
 
-    /* 2. ZONA DE UPLOAD IDENTICA AO MODELO (AJUSTE DE FONTE E TAMANHO) */
+    /* 2. ZONA DE UPLOAD IDENTICA AO MODELO */
     [data-testid="stFileUploader"] { 
         border: 2px dashed #FF69B4 !important; 
         border-radius: 20px !important;
         background: #FFFFFF !important;
         padding: 30px !important;
     }
-    
-    /* Texto dentro da zona de upload */
-    [data-testid="stFileUploader"] label, [data-testid="stFileUploader"] div {
-        font-size: 1.1rem !important;
-        color: #6C757D !important;
-    }
 
-    /* BOTÃO BROWSE FILES (Rosa Sólido, Montserrat 800, Tamanho Real) */
+    /* BOTÃO BROWSE FILES (Rosa Sólido com Montserrat 800 - SEM UPPERCASE) */
     [data-testid="stFileUploader"] section button {
         background-color: #FF69B4 !important; 
         color: white !important; 
         border: 3px solid #FFFFFF !important;
         font-family: 'Montserrat', sans-serif !important;
         font-weight: 800 !important;
-        font-size: 1rem !important;
         border-radius: 15px !important;
         box-shadow: 0 0 15px rgba(255, 105, 180, 0.4) !important;
-        text-transform: none !important; /* Texto como no exemplo: Browse files */
-        padding: 10px 20px !important;
+        text-transform: none !important; /* TEXTO AO NATURAL COMO NO EXEMPLO */
     }
 
     /* BOTÕES DE DOWNLOAD */
@@ -81,7 +72,7 @@ st.markdown("""
         background-color: #FF69B4 !important; 
         color: white !important; 
         border: 3px solid #FFFFFF !important;
-        font-weight: 800 !important;
+        font-weight: 700 !important;
         border-radius: 15px !important;
         box-shadow: 0 0 15px rgba(255, 105, 180, 0.4) !important;
         text-transform: uppercase;
@@ -90,6 +81,15 @@ st.markdown("""
     div.stDownloadButton > button:hover, [data-testid="stFileUploader"] section button:hover {
         transform: translateY(-5px) !important;
         box-shadow: 0 10px 20px rgba(255, 105, 180, 0.6) !important;
+    }
+
+    /* Botões de Ação Menores */
+    div.stButton > button:not([data-testid="stDownloadButton"]) {
+        border-radius: 15px;
+        background-color: white;
+        color: #6C757D;
+        font-weight: 800 !important;
+        border: 1px solid #DEE2E6;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -290,7 +290,7 @@ if arquivo_subido and taxa_cambio > 0:
             'v_total_nota': v_prod_composto + v_ipi_tot + outras_desp_total + (0 if tem_dif == "Sim" else v_icms_recolher)
         }
 
-        st.success("✅ Auditoria realizada!")
+        st.success("✅ Auditoria restaurada com fonte Montserrat 800!")
         col_res1, col_res2 = st.columns(2)
         with col_res1:
             buffer_xlsx = io.BytesIO()
