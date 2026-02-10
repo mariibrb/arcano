@@ -47,13 +47,12 @@ st.markdown("""
     }
 
     /* CAMPOS DE PREENCHIMENTO EM BRANCO */
-    [data-baseweb="input"], [data-baseweb="select"], .stNumberInput input, div[role="radiogroup"] {
+    [data-baseweb="input"], [data-baseweb="select"], .stNumberInput input, div[role="radiogroup"], .stSelectbox div {
         background-color: white !important;
         border-radius: 12px !important;
     }
 
-    /* --- INSTRUÇÕES DE UPLOAD APLICADAS --- */
-    /* ZONA DE UPLOAD: Pontilhado Grosso e Fundo Branco */
+    /* 2. ZONA DE UPLOAD IDÊNTICA AO MODELO (PONTILHADO GROSSO E FUNDO BRANCO) */
     [data-testid="stFileUploader"] { 
         border: 5px dashed #FF69B4 !important; /* Pontilhado Grosso de 5px */
         border-radius: 20px !important;
@@ -61,7 +60,7 @@ st.markdown("""
         padding: 30px !important;
     }
 
-    /* BOTÃO Browse files (Rosa Sólido com Montserrat 800) */
+    /* BOTÃO BROWSE FILES (Rosa Sólido com Montserrat 800 e Letras ao Natural) */
     [data-testid="stFileUploader"] section button {
         background-color: #FF69B4 !important; 
         color: white !important; 
@@ -70,7 +69,7 @@ st.markdown("""
         font-weight: 800 !important; /* Letra gordinha e bonita */
         border-radius: 15px !important;
         box-shadow: 0 0 15px rgba(255, 105, 180, 0.4) !important;
-        text-transform: uppercase;
+        text-transform: none !important; /* Remove o excesso de maiúsculas */
     }
 
     /* BOTÕES DE DOWNLOAD (Mantendo padrão rosa vibrante) */
@@ -83,6 +82,7 @@ st.markdown("""
         border-radius: 15px !important;
         box-shadow: 0 0 15px rgba(255, 105, 180, 0.4) !important;
         text-transform: uppercase;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
     }
 
     div.stDownloadButton > button:hover, [data-testid="stFileUploader"] section button:hover {
